@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
-    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO
+    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO, save_project
 )
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
@@ -23,7 +23,7 @@ st.subheader("Configuração e Detalhamento do Empreendimento")
 
 if 'pavimentos' not in st.session_state:
     st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
-    
+
 # --- Exibição e Edição dos dados gerais ---
 with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
@@ -32,7 +32,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     c2.markdown(render_metric_card("Área Terreno", f"{fmt_br(info['area_terreno'])} m²", cores[1]), unsafe_allow_html=True)
     c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(info['area_privativa'])} m²", cores[2]), unsafe_allow_html=True)
     c4.markdown(render_metric_card("Nº Unidades", str(info["num_unidades"]), cores[3]), unsafe_allow_html=True)
-    
+
 # --- Detalhamento dos Pavimentos ---
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     b1, b2, _ = st.columns([0.2, 0.2, 0.6])
@@ -67,3 +67,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
 # Atualiza a sessão
 info['pavimentos'] = st.session_state.pavimentos
+
+if st.button("Salvar Dados do Projeto", type="primary"):
+    save_project(info)
+    st.success("Dados do projeto salvos com sucesso!")

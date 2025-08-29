@@ -1,4 +1,4 @@
-# pages/1_Custos_Diretos.py
+# pages/2_Custos_Diretos.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px

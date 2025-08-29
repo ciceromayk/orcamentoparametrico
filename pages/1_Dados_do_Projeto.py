@@ -2,18 +2,19 @@ import streamlit as st
 import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
-    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO, save_project
+    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO, save_project,
+    init_session_state_vars, calcular_areas_e_custos
 )
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
 
-# CSS para diminuir as fontes da tabela
+# CSS para diminuir as fontes da tabela e adicionar barra de rolagem
 st.markdown("""
 <style>
     /* Diminui a fonte dos cabeçalhos das colunas */
     [data-testid="column"] .st-markdown > p {
         font-size: 14px;
-        text-align: center; /* Centraliza o texto do cabeçalho */
+        text-align: center;
     }
     /* Diminui a fonte dos inputs e selectboxes */
     .stTextInput > div > div > input,
@@ -23,6 +24,11 @@ st.markdown("""
     /* Diminui a fonte do checkbox */
     .stCheckbox > label {
         font-size: 14px;
+    }
+    /* Adiciona barra de rolagem vertical para a seção de pavimentos */
+    .pavimentos-scrollable-container {
+        max-height: 400px;
+        overflow-y: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -53,6 +59,9 @@ def confirm_delete_dialog():
                 st.session_state.deleting_pav_index = None
                 st.rerun()
 
+# Inicializa as variáveis de estado
+init_session_state_vars(st.session_state.projeto_info)
+
 # Passamos uma chave única para a sidebar para evitar erros de chave duplicada
 render_sidebar(form_key="sidebar_dados_projeto")
 
@@ -60,19 +69,11 @@ info = st.session_state.projeto_info
 st.title("📝 Dados do Projeto")
 st.subheader("Configuração e Detalhamento do Empreendimento")
 
-if 'pavimentos' not in st.session_state:
-    st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
-if 'deleting_pav_index' not in st.session_state:
-    st.session_state.deleting_pav_index = None
-
 # --- Exibição e Edição dos dados gerais ---
 with st.expander("📝 Dados Gerais do Projeto", expanded=True):
-    # Cálculo das áreas para exibição nos cartões
-    pavimentos_df = pd.DataFrame(st.session_state.pavimentos)
-    area_construida_total = pavimentos_df.apply(lambda r: r["area"] * r["rep"] if r["constr"] else 0.0, axis=1).sum()
-    area_equivalente_total = (pavimentos_df["area"] * pavimentos_df["rep"] * pavimentos_df["coef"]).sum()
+    # Chamando a função centralizada de cálculo
+    area_construida_total, area_equivalente_total, _, _ = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
     
-    # Adicionando os novos cartões
     c1, c2, c3, c4, c5 = st.columns(5)
     cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442", "#5c5c5c"]
     c1.markdown(render_metric_card("Nome", info["nome"], cores[0]), unsafe_allow_html=True)
@@ -88,53 +89,51 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    # Larguras das colunas ajustadas: Nome menor (3), Tipo maior (4)
+    # Larguras das colunas ajustadas
     col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.8]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
-        # Centralizando o texto do cabeçalho
         hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
 
-    for i, pav in enumerate(st.session_state.pavimentos):
-        cols = st.columns(col_widths)
-        pav['nome'] = cols[0].text_input("nome", pav['nome'], key=f"nome_{i}", label_visibility="collapsed")
-        pav['tipo'] = cols[1].selectbox("tipo", list(TIPOS_PAVIMENTO.keys()), list(TIPOS_PAVIMENTO.keys()).index(pav.get('tipo', next(iter(TIPOS_PAVIMENTO)))), key=f"tipo_{i}", label_visibility="collapsed")
-        pav['rep'] = cols[2].number_input("rep", min_value=1, value=pav['rep'], step=1, key=f"rep_{i}", label_visibility="collapsed")
-        
-        # Lógica para o campo de texto com validação e dica
-        min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
-        help_text = f"Intervalo: {min_c:.2f} - {max_c:.2f}"
-        
-        # Correção do erro: Garante que o valor do coeficiente esteja dentro do intervalo válido
-        if float(pav.get('coef', min_c)) > max_c:
-            pav['coef'] = max_c
-        elif float(pav.get('coef', min_c)) < min_c:
-            pav['coef'] = min_c
+    with st.container():
+        st.markdown('<div class="pavimentos-scrollable-container">', unsafe_allow_html=True)
+        for i, pav in enumerate(st.session_state.pavimentos):
+            cols = st.columns(col_widths)
+            pav['nome'] = cols[0].text_input("nome", pav['nome'], key=f"nome_{i}", label_visibility="collapsed")
+            pav['tipo'] = cols[1].selectbox("tipo", list(TIPOS_PAVIMENTO.keys()), list(TIPOS_PAVIMENTO.keys()).index(pav.get('tipo', next(iter(TIPOS_PAVIMENTO)))), key=f"tipo_{i}", label_visibility="collapsed")
+            pav['rep'] = cols[2].number_input("rep", min_value=1, value=pav['rep'], step=1, key=f"rep_{i}", label_visibility="collapsed")
+            
+            min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
+            help_text = f"Intervalo: {min_c:.2f} - {max_c:.2f}"
+            
+            if float(pav.get('coef', min_c)) > max_c:
+                pav['coef'] = max_c
+            elif float(pav.get('coef', min_c)) < min_c:
+                pav['coef'] = min_c
 
-        if min_c == max_c:
-            cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{pav['coef']:.2f}</div>", unsafe_allow_html=True)
-        else:
-            pav['coef'] = cols[3].number_input("coef", min_value=min_c, max_value=max_c, value=float(pav.get('coef', min_c)), step=0.01, format="%.2f", key=f"coef_{i}", label_visibility="collapsed", help=help_text)
+            if min_c == max_c:
+                cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{pav['coef']:.2f}</div>", unsafe_allow_html=True)
+            else:
+                pav['coef'] = cols[3].number_input("coef", min_value=min_c, max_value=max_c, value=float(pav.get('coef', min_c)), step=0.01, format="%.2f", key=f"coef_{i}", label_visibility="collapsed", help=help_text)
 
-        pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
-        
-        # Substituindo o st.selectbox por st.checkbox
-        pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
-        
-        total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
-        cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
-        cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)
+            pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
+            
+            pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
+            
+            total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
+            cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
+            cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)
 
-        if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
-            st.session_state.deleting_pav_index = i
-            st.rerun()
+            if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
+                st.session_state.deleting_pav_index = i
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Lógica de confirmação de exclusão
+
     if st.session_state.deleting_pav_index is not None:
         confirm_delete_dialog()
 
-# Atualiza a sessão
 info['pavimentos'] = st.session_state.pavimentos
 
 if st.button("Salvar Dados do Projeto", type="primary"):

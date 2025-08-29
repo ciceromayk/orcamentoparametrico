@@ -81,7 +81,8 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.rerun()
 
     col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8, 0.8]
-    headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "Considerar A.C?", "Ação"]
+    # Atualizando o cabeçalho para "A.C?"
+    headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
         hc.markdown(f'**{title}**')

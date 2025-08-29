@@ -1,4 +1,4 @@
-# 1_Dados_do_Projeto.py
+# pages/1_Dados_do_Projeto.py
 import streamlit as st
 import pandas as pd
 from utils import (

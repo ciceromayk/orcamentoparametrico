@@ -97,7 +97,8 @@ with st.container(border=True):
 
 
 with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
-    col_slider, col_spacer = st.columns([0.6, 0.4])
+    # Removendo a divisão em colunas para a tabela e o resumo
+    col_slider = st.columns([0.6])[0]
     with col_slider:
         st.session_state.duracao_obra = st.slider(
             "Duração da Obra (meses):",
@@ -147,20 +148,17 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
     
     gridOptions = gb.build()
 
-    col_tabela_obra, col_metricas_obra = st.columns([0.6, 0.4])
-
-    with col_tabela_obra:
-        st.write("### Ajuste os Custos Mensais")
-        grid_response = AgGrid(
-            df_custos_obra,
-            gridOptions=gridOptions,
-            height=450,
-            width='100%',
-            update_mode='MODEL_CHANGED',
-            allow_unsafe_jscode=True,
-            try_convert_numeric_dtypes=True,
-            theme='streamlit'
-        )
+    st.write("### Ajuste os Custos Mensais")
+    grid_response = AgGrid(
+        df_custos_obra,
+        gridOptions=gridOptions,
+        height=450,
+        width='100%',
+        update_mode='MODEL_CHANGED',
+        allow_unsafe_jscode=True,
+        try_convert_numeric_dtypes=True,
+        theme='streamlit'
+    )
     
     # Usa os dados editados
     edited_df_custos_obra = grid_response['data']
@@ -177,30 +175,3 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
         }
         info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra
         info['duracao_obra'] = st.session_state.duracao_obra
-        
-        with col_metricas_obra:
-            st.subheader("Resumo") # Alterado para subheader
-
-            card_metric_pro(
-                label="Custo Mensal Total",
-                value=f"R$ {fmt_br(total_mensal)}",
-                icon_name="cash-coin",
-                bg_color="linear-gradient(145deg, #e6f2ff, #cce5ff)",
-                text_color="#0056b3"
-            )
-            
-            card_metric_pro(
-                label="Duração da Obra (meses)",
-                value=f"{st.session_state.duracao_obra}",
-                icon_name="clock",
-                bg_color="linear-gradient(145deg, #f0fff0, #d9f7d9)",
-                text_color="#28a745"
-            )
-            
-            card_metric_pro(
-                label="Custo Indireto de Obra Total",
-                value=f"R$ {fmt_br(custo_indireto_obra_total_recalculado)}",
-                icon_name="building-fill-up",
-                bg_color="linear-gradient(145deg, #fff5e6, #ffe0b3)",
-                text_color="#ff7f00"
-            )

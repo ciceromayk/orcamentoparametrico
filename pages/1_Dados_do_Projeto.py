@@ -61,7 +61,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8]
+    col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8, 0.8]  # Corrigido: 9 valores para 9 colunas
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "Considerar A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):

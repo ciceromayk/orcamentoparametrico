@@ -80,7 +80,8 @@ def page_project_selection():
             
             if cols[3].button("Carregar", key=f"load_{proj['id']}", use_container_width=True):
                 st.session_state.projeto_info = load_project(proj['id'])
-                st.switch_page("pages/2_Custos_Diretos.py")
+                # ATUALIZAÇÃO AQUI
+                st.switch_page("pages/1_Dados_do_Projeto.py")
 
             if cols[4].button("🗑️", key=f"delete_{proj['id']}", use_container_width=True, help=f"Excluir projeto '{proj['nome']}'"):
                 delete_project(proj['id'])

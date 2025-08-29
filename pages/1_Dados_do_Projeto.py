@@ -67,12 +67,19 @@ if 'deleting_pav_index' not in st.session_state:
 
 # --- Exibição e Edição dos dados gerais ---
 with st.expander("📝 Dados Gerais do Projeto", expanded=True):
-    c1, c2, c3, c4 = st.columns(4)
-    cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442"]
+    # Cálculo das áreas para exibição nos cartões
+    pavimentos_df = pd.DataFrame(st.session_state.pavimentos)
+    area_construida_total = pavimentos_df.apply(lambda r: r["area"] * r["rep"] if r["constr"] else 0.0, axis=1).sum()
+    area_equivalente_total = (pavimentos_df["area"] * pavimentos_df["rep"] * pavimentos_df["coef"]).sum()
+    
+    # Adicionando os novos cartões
+    c1, c2, c3, c4, c5 = st.columns(5)
+    cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442", "#5c5c5c"]
     c1.markdown(render_metric_card("Nome", info["nome"], cores[0]), unsafe_allow_html=True)
     c2.markdown(render_metric_card("Área Terreno", f"{fmt_br(info['area_terreno'])} m²", cores[1]), unsafe_allow_html=True)
     c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(info['area_privativa'])} m²", cores[2]), unsafe_allow_html=True)
-    c4.markdown(render_metric_card("Nº Unidades", str(info["num_unidades"]), cores[3]), unsafe_allow_html=True)
+    c4.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[3]), unsafe_allow_html=True)
+    c5.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[4]), unsafe_allow_html=True)
 
 # --- Detalhamento dos Pavimentos ---
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
@@ -129,26 +136,6 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
 # Atualiza a sessão
 info['pavimentos'] = st.session_state.pavimentos
-
-# --- Adicionando a Tabela de Detalhamento do Empreendimento aqui ---
-if 'pavimentos' in info and info['pavimentos']:
-    df = pd.DataFrame(info['pavimentos'])
-    custos_config = info.get('custos_config', {})
-    
-    # Recálculos necessários
-    df["area_total"] = df["area"] * df["rep"]
-    df["area_eq"] = df["area_total"] * df["coef"]
-    df["area_constr"] = df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
-    df["custo_direto"] = df["area_eq"] * custos_config.get('custo_area_privativa', 4500.0)
-    
-    with st.expander("📑 Detalhamento do Empreendimento", expanded=True):
-        df_display = df.rename(columns={"nome": "Nome", "tipo": "Tipo", "rep": "Rep.", "coef": "Coef.", "area": "Área (m²)", "area_eq": "Área Eq. Total (m²)", "area_constr": "Área Constr. (m²)", "custo_direto": "Custo Direto (R$)"})
-        colunas_a_exibir = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total (m²)", "Área Constr. (m²)", "Custo Direto (R$)"]
-        st.dataframe(df_display[colunas_a_exibir], use_container_width=True, hide_index=True,
-            column_config={
-                "Área (m²)": st.column_config.NumberColumn(format="%.2f"), "Área Eq. Total (m²)": st.column_config.NumberColumn(format="%.2f"),
-                "Área Constr. (m²)": st.column_config.NumberColumn(format="%.2f"), "Custo Direto (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
-            })
 
 if st.button("Salvar Dados do Projeto", type="primary"):
     save_project(info)

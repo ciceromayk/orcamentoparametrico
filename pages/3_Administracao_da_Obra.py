@@ -17,11 +17,11 @@ st.markdown("""
 <style>
     /* Aumenta a fonte do cabeçalho da tabela */
     .ag-theme-streamlit .ag-header-cell-text {
-        font-size: 18px !important;
+        font-size: 20px !important;
     }
     /* Aumenta a fonte das células da tabela */
     .ag-theme-streamlit .ag-cell {
-        font-size: 18px !important;
+        font-size: 20px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -70,10 +70,33 @@ if 'custos_indiretos_obra' not in st.session_state:
 if 'duracao_obra' not in st.session_state:
     st.session_state.duracao_obra = info.get('duracao_obra', 12)
 
+# Colocando os cards no topo, alinhados horizontalmente
+with st.container(border=True):
+    total_mensal = sum(st.session_state.custos_indiretos_obra.values())
+    custo_indireto_obra_total_recalculado = total_mensal * st.session_state.duracao_obra
+
+    card_cols = st.columns(3)
+    
+    card_cols[0].markdown(render_metric_card(
+        "Custo Mensal Total",
+        f"R$ {fmt_br(total_mensal)}",
+        "#007bff"
+    ), unsafe_allow_html=True)
+
+    card_cols[1].markdown(render_metric_card(
+        "Duração da Obra (meses)",
+        f"{st.session_state.duracao_obra}",
+        "#28a745"
+    ), unsafe_allow_html=True)
+
+    card_cols[2].markdown(render_metric_card(
+        "Custo Indireto de Obra Total",
+        f"R$ {fmt_br(custo_indireto_obra_total_recalculado)}",
+        "#ff7f00"
+    ), unsafe_allow_html=True)
+
 
 with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
-    st.subheader("Configuração dos Custos Indiretos da Obra")
-
     col_slider, col_spacer = st.columns([0.6, 0.4])
     with col_slider:
         st.session_state.duracao_obra = st.slider(
@@ -85,9 +108,7 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
 
     # Prepara os dados para o AgGrid
     dados_tabela_obra = []
-    total_mensal = sum(st.session_state.custos_indiretos_obra.values())
-    custo_indireto_obra_total_recalculado = total_mensal * st.session_state.duracao_obra
-
+    
     for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
         dados_tabela_obra.append({
             "Item": item,

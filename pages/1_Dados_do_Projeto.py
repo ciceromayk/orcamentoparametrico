@@ -23,6 +23,8 @@ st.subheader("Configuração e Detalhamento do Empreendimento")
 
 if 'pavimentos' not in st.session_state:
     st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
+if 'deleting_pav_index' not in st.session_state:
+    st.session_state.deleting_pav_index = None
 
 # --- Exibição e Edição dos dados gerais ---
 with st.expander("📝 Dados Gerais do Projeto", expanded=True):
@@ -34,18 +36,16 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     c4.markdown(render_metric_card("Nº Unidades", str(info["num_unidades"]), cores[3]), unsafe_allow_html=True)
 
 # --- Detalhamento dos Pavimentos ---
-# Trecho de código para a página 1_Dados_do_Projeto.py
-...
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     b1, _ = st.columns([0.2, 0.8])
-    if b1.button("➕ Adicionar Pavimento"):
+    if b1.button("➕ Adicionar Pavimento"): 
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    col_widths = [3, 3, 1, 1.2, 1.5, 1.5, 1.5, 1.5, 0.8]  # Adicionada nova largura para o botão
-    headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "Considerar A.C?", "Ação"] # Adicionado novo cabeçalho
+    col_widths = [3, 3, 1, 1.2, 1.5, 1.5, 1.5, 1.5, 0.8]
+    headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "Considerar A.C?", "Ação"]
     header_cols = st.columns(col_widths)
-    for hc, title in zip(header_cols, headers):
+    for hc, title in zip(header_cols, headers): 
         hc.markdown(f'**{title}**')
 
     for i, pav in enumerate(st.session_state.pavimentos):
@@ -55,7 +55,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         pav['rep'] = cols[2].number_input("rep", min_value=1, value=pav['rep'], step=1, key=f"rep_{i}", label_visibility="collapsed")
         min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
         pav['coef'] = min_c if min_c == max_c else cols[3].slider("coef", min_c, max_c, float(pav.get('coef', min_c)), 0.01, format="%.2f", key=f"coef_{i}", label_visibility="collapsed")
-        if min_c == max_c:
+        if min_c == max_c: 
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{pav['coef']:.2f}</div>", unsafe_allow_html=True)
         pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
         pav['constr'] = cols[7].selectbox("incluir", ["Sim", "Não"], 0 if pav.get('constr', True) else 1, key=f"constr_{i}", label_visibility="collapsed") == "Sim"
@@ -63,7 +63,26 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
         cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)
 
-        # Novo botão de exclusão
         if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
-            del st.session_state.pavimentos[i]
+            st.session_state.deleting_pav_index = i
             st.rerun()
+
+    # Lógica de confirmação de exclusão
+    if st.session_state.deleting_pav_index is not None:
+        with st.container(border=True):
+            st.warning("Tem certeza que deseja excluir este pavimento?")
+            confirm_cols = st.columns(2)
+            if confirm_cols[0].button("Confirmar Exclusão", use_container_width=True, type="primary"):
+                del st.session_state.pavimentos[st.session_state.deleting_pav_index]
+                st.session_state.deleting_pav_index = None
+                st.rerun()
+            if confirm_cols[1].button("Cancelar", use_container_width=True):
+                st.session_state.deleting_pav_index = None
+                st.rerun()
+                
+# Atualiza a sessão
+info['pavimentos'] = st.session_state.pavimentos
+
+if st.button("Salvar Dados do Projeto", type="primary"):
+    save_project(info)
+    st.success("Dados do projeto salvos com sucesso!")

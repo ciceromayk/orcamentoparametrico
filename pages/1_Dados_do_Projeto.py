@@ -7,6 +7,25 @@ from utils import (
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
 
+# CSS para diminuir as fontes da tabela
+st.markdown("""
+<style>
+    /* Diminui a fonte dos cabeçalhos das colunas */
+    [data-testid="column"] .st-markdown > p {
+        font-size: 14px;
+    }
+    /* Diminui a fonte dos inputs e selectboxes */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div > div {
+        font-size: 14px;
+    }
+    /* Diminui a fonte do checkbox */
+    .stCheckbox > label {
+        font-size: 14px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 if "projeto_info" not in st.session_state:
     st.error("Nenhum projeto carregado. Por favor, selecione um projeto na página inicial.")
     if st.button("Voltar para a seleção de projetos"):
@@ -61,7 +80,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8, 0.8]  # Corrigido: 9 valores para 9 colunas
+    col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8, 0.8]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "Considerar A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
@@ -89,7 +108,10 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             pav['coef'] = cols[3].number_input("coef", min_value=min_c, max_value=max_c, value=float(pav.get('coef', min_c)), step=0.01, format="%.2f", key=f"coef_{i}", label_visibility="collapsed", help=help_text)
 
         pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
-        pav['constr'] = cols[7].selectbox("incluir", ["Sim", "Não"], 0 if pav.get('constr', True) else 1, key=f"constr_{i}", label_visibility="collapsed") == "Sim"
+        
+        # Substituindo o st.selectbox por st.checkbox
+        pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
+        
         total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
         cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
         cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)

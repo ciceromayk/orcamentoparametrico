@@ -77,6 +77,12 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
         help_text = f"Intervalo: {min_c:.2f} - {max_c:.2f}"
         
+        # Correção do erro: Garante que o valor do coeficiente esteja dentro do intervalo válido
+        if float(pav.get('coef', min_c)) > max_c:
+            pav['coef'] = max_c
+        elif float(pav.get('coef', min_c)) < min_c:
+            pav['coef'] = min_c
+
         if min_c == max_c:
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{pav['coef']:.2f}</div>", unsafe_allow_html=True)
         else:

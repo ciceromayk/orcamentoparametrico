@@ -76,6 +76,46 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
     "Despesas de Escritório e Apoio": 800.0,
 }
 
+def init_session_state_vars(info):
+    if 'pavimentos' not in st.session_state:
+        st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
+    if 'deleting_pav_index' not in st.session_state:
+        st.session_state.deleting_pav_index = None
+    if 'custos_indiretos_obra' not in st.session_state:
+        st.session_state.custos_indiretos_obra = info.get('custos_indiretos_obra', {k: v for k, v in DEFAULT_CUSTOS_INDIRETOS_OBRA.items()})
+    if 'duracao_obra' not in st.session_state:
+        st.session_state.duracao_obra = info.get('duracao_obra', 12)
+    if 'etapas_percentuais' not in st.session_state:
+        etapas_salvas = info.get('etapas_percentuais', {})
+        if etapas_salvas and isinstance(list(etapas_salvas.values())[0], (int, float)):
+            st.session_state.etapas_percentuais = {etapa: {"percentual": val, "fonte": "Manual"} for etapa, val in etapas_salvas.items()}
+        else:
+            st.session_state.etapas_percentuais = {etapa: etapas_salvas.get(etapa, {"percentual": vals[1], "fonte": "Manual"}) for etapa, vals in ETAPAS_OBRA.items()}
+    if 'custos_indiretos_percentuais' not in st.session_state:
+        custos_salvos = info.get('custos_indiretos_percentuais', {})
+        if custos_salvos and isinstance(list(custos_salvos.values())[0], (int, float)):
+            st.session_state.custos_indiretos_percentuais = {item: {"percentual": val, "fonte": "Manual"} for item, val in custos_salvos.items()}
+        else:
+            st.session_state.custos_indiretos_percentuais = {item: custos_salvos.get(item, {"percentual": vals[1], "fonte": "Manual"}) for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()}
+
+def calcular_areas_e_custos(pavimentos_list, custos_config):
+    pavimentos_df = pd.DataFrame(pavimentos_list)
+    if pavimentos_df.empty:
+        return 0, 0, 0, pd.DataFrame()
+
+    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
+    
+    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
+    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
+    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
+    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
+    
+    area_construida_total = pavimentos_df["area_constr"].sum()
+    area_equivalente_total = pavimentos_df["area_eq"].sum()
+    custo_direto_total = pavimentos_df["custo_direto"].sum()
+    
+    return area_construida_total, area_equivalente_total, custo_direto_total, pavimentos_df
+
 def init_storage(path):
     if not os.path.exists(path):
         with open(path, "w", encoding="utf-8") as f: json.dump([], f, ensure_ascii=False, indent=4)

@@ -13,6 +13,7 @@ st.markdown("""
     /* Diminui a fonte dos cabeçalhos das colunas */
     [data-testid="column"] .st-markdown > p {
         font-size: 14px;
+        text-align: center; /* Centraliza o texto do cabeçalho */
     }
     /* Diminui a fonte dos inputs e selectboxes */
     .stTextInput > div > div > input,
@@ -80,12 +81,13 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    col_widths = [3, 3, 1, 1.5, 1.5, 1.5, 1.5, 0.8, 0.8]
-    # Atualizando o cabeçalho para "A.C?"
+    # Larguras das colunas ajustadas: Nome menor (3), Tipo maior (4)
+    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.8]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
-        hc.markdown(f'**{title}**')
+        # Centralizando o texto do cabeçalho
+        hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
 
     for i, pav in enumerate(st.session_state.pavimentos):
         cols = st.columns(col_widths)

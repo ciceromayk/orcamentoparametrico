@@ -7,7 +7,7 @@ from utils import (
     list_projects, save_project, load_project, delete_project,
     DEFAULT_PAVIMENTO, ETAPAS_OBRA, DEFAULT_CUSTOS_INDIRETOS, DEFAULT_CUSTOS_INDIRETOS_FIXOS,
     DEFAULT_CUSTOS_INDIRETOS_OBRA, JSON_PATH, HISTORICO_DIRETO_PATH, HISTORICO_INDIRETO_PATH,
-    load_json, save_to_historico, TIPOS_PAVIMENTO
+    load_json, save_to_historico, TIPOS_PAVIMENTO, init_session_state_vars, calcular_areas_e_custos
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
@@ -18,55 +18,27 @@ if "projeto_info" not in st.session_state:
         st.switch_page("Início.py")
     st.stop()
 
-# Passamos uma chave única para a sidebar para evitar erros de chave duplicada
+# Inicializa as variáveis de estado
+init_session_state_vars(st.session_state.projeto_info)
+
 render_sidebar(form_key="sidebar_custos_diretos")
 
 info = st.session_state.projeto_info
 st.title("🏗️ Custos Diretos")
 st.subheader("Análise e Detalhamento de Custos da Obra")
 
-if 'pavimentos' not in st.session_state:
-    st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
-if 'custos_indiretos_obra' not in st.session_state:
-    st.session_state.custos_indiretos_obra = info.get('custos_indiretos_obra', {k: v for k, v in DEFAULT_CUSTOS_INDIRETOS_OBRA.items()})
-if 'duracao_obra' not in st.session_state:
-    st.session_state.duracao_obra = info.get('duracao_obra', 12)
+# Chamando a função centralizada de cálculo
+area_construida_total, _, custo_direto_total, pavimentos_df = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
 
-# --- CÁLCULOS PRELIMINARES ---
-pavimentos_df = pd.DataFrame(info.get('pavimentos', []))
-custos_config = info.get('custos_config', {})
-custo_direto_total, area_construida_total = 0, 0
 custo_indireto_obra_total = 0
-
-if not pavimentos_df.empty:
-    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
-    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
-    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
-    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
-    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
-    custo_direto_total = pavimentos_df["custo_direto"].sum()
-    area_construida_total = pavimentos_df["area_constr"].sum()
-
-# Calcular novos custos indiretos da obra (será usado na página de resultados)
 for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
     custo_indireto_obra_total += valor_mensal * st.session_state.duracao_obra
 
-# O custo direto do projeto agora inclui os custos indiretos de obra
 custo_direto_total_final = custo_direto_total
 
 if not pavimentos_df.empty:
-    df = pd.DataFrame(info['pavimentos'])
-    custos_config = info.get('custos_config', {})
-    df["area_total"] = df["area"] * df["rep"]
-    df["area_eq"] = df["area_total"] * df["coef"]
-    df["area_constr"] = df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
-    df["custo_direto"] = df["area_eq"] * custos_config.get('custo_area_privativa', 4500.0)
-    
-    # O custo direto do projeto agora é a soma simples dos custos diretos da construção
-    custo_direto_total_final = df["custo_direto"].sum()
-    
     with st.expander("📊 Análise e Resumo Financeiro", expanded=True):
-        total_constr = df["area_constr"].sum()
+        total_constr = area_construida_total
         custo_por_ac = custo_direto_total_final / total_constr if total_constr > 0 else 0.0
         custo_med_unit = custo_direto_total_final / info["num_unidades"] if info["num_unidades"] > 0 else 0.0
         card_cols = st.columns(4)
@@ -76,22 +48,12 @@ if not pavimentos_df.empty:
         card_cols[2].markdown(render_metric_card("Custo / m² (Área Constr.)", f"R$ {fmt_br(custo_por_ac)}", cores[1]), unsafe_allow_html=True)
         card_cols[3].markdown(render_metric_card("Área Construída Total", f"{fmt_br(total_constr)} m²", cores[2]), unsafe_allow_html=True)
         
-        custo_por_tipo = df.groupby("tipo")["custo_direto"].sum().reset_index()
+        custo_por_tipo = pavimentos_df.groupby("tipo")["custo_direto"].sum().reset_index()
         fig = px.bar(custo_por_tipo, x='tipo', y='custo_direto', text_auto='.2s', title="Custo Direto por Tipo de Pavimento")
         fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False); fig.update_layout(xaxis_title=None, yaxis_title="Custo (R$)")
         st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("💸 Custo Direto por Etapa da Obra", expanded=True):
-        if 'etapas_percentuais' not in st.session_state:
-            etapas_salvas = info.get('etapas_percentuais', {})
-            if etapas_salvas and isinstance(list(etapas_salvas.values())[0], (int, float)):
-                st.session_state.etapas_percentuais = {etapa: {"percentual": val, "fonte": "Manual"} for etapa, val in etapas_salvas.items()}
-            else:
-                st.session_state.etapas_percentuais = {etapa: etapas_salvas.get(etapa, {"percentual": vals[1], "fonte": "Manual"}) for etapa, vals in ETAPAS_OBRA.items()}
-
-        if 'previous_etapas_percentuais' not in st.session_state:
-            st.session_state.previous_etapas_percentuais = {k: v.copy() for k, v in st.session_state.etapas_percentuais.items()}
-        
         st.markdown("##### Comparativo com Histórico de Obras")
         obras_historicas = load_json(HISTORICO_DIRETO_PATH)
         obra_ref_selecionada = st.selectbox("Usar como Referência:", ["Nenhuma"] + [f"{o['id']} – {o['nome']}" for o in obras_historicas], index=0, key="ref_direto")
@@ -128,7 +90,7 @@ if not pavimentos_df.empty:
                 handle_percentage_redistribution('etapas_percentuais', ETAPAS_OBRA)
                 st.rerun()
 
-            custo_etapa = custo_direto_total_final * (percent_input / 100) # Custo calculado sobre o total ajustado
+            custo_etapa = custo_direto_total_final * (percent_input / 100)
             c[5].markdown(f"<p style='text-align: center;'>R$ {fmt_br(custo_etapa)}</p>", unsafe_allow_html=True)
             
             if c[6].button("⬅️", key=f"apply_{etapa}", help=f"Aplicar percentual de referência ({ref_val:.2f}%)", use_container_width=True):

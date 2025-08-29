@@ -119,7 +119,7 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
     
     df_custos_obra = pd.DataFrame(dados_tabela_obra)
 
-    # Configura o AgGrid
+    # Configura o AgGrid para ter larguras de coluna fixas
     gb = GridOptionsBuilder.from_dataframe(df_custos_obra)
 
     jscode_formatador_moeda = JsCode("""
@@ -129,7 +129,7 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
         }
     """)
     
-    gb.configure_column("Item", headerName="Item", flex=5, resizable=True)
+    gb.configure_column("Item", headerName="Item", flex=1, resizable=False)
     gb.configure_column("Custo Mensal (R$)",
         headerName="Custo Mensal (R$)",
         editable=True,
@@ -175,3 +175,4 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
         }
         info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra
         info['duracao_obra'] = st.session_state.duracao_obra
+        

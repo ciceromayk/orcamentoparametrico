@@ -123,12 +123,32 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             st.session_state.deleting_pav_index = i
             st.rerun()
 
-# Lógica de confirmação de exclusão
-if st.session_state.deleting_pav_index is not None:
-    confirm_delete_dialog()
+    # Lógica de confirmação de exclusão
+    if st.session_state.deleting_pav_index is not None:
+        confirm_delete_dialog()
 
 # Atualiza a sessão
 info['pavimentos'] = st.session_state.pavimentos
+
+# --- Adicionando a Tabela de Detalhamento do Empreendimento aqui ---
+if 'pavimentos' in info and info['pavimentos']:
+    df = pd.DataFrame(info['pavimentos'])
+    custos_config = info.get('custos_config', {})
+    
+    # Recálculos necessários
+    df["area_total"] = df["area"] * df["rep"]
+    df["area_eq"] = df["area_total"] * df["coef"]
+    df["area_constr"] = df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
+    df["custo_direto"] = df["area_eq"] * custos_config.get('custo_area_privativa', 4500.0)
+    
+    with st.expander("📑 Detalhamento do Empreendimento", expanded=True):
+        df_display = df.rename(columns={"nome": "Nome", "tipo": "Tipo", "rep": "Rep.", "coef": "Coef.", "area": "Área (m²)", "area_eq": "Área Eq. Total (m²)", "area_constr": "Área Constr. (m²)", "custo_direto": "Custo Direto (R$)"})
+        colunas_a_exibir = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total (m²)", "Área Constr. (m²)", "Custo Direto (R$)"]
+        st.dataframe(df_display[colunas_a_exibir], use_container_width=True, hide_index=True,
+            column_config={
+                "Área (m²)": st.column_config.NumberColumn(format="%.2f"), "Área Eq. Total (m²)": st.column_config.NumberColumn(format="%.2f"),
+                "Área Constr. (m²)": st.column_config.NumberColumn(format="%.2f"), "Custo Direto (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
+            })
 
 if st.button("Salvar Dados do Projeto", type="primary"):
     save_project(info)

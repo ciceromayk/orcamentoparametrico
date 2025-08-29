@@ -81,15 +81,6 @@ if not pavimentos_df.empty:
         fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False); fig.update_layout(xaxis_title=None, yaxis_title="Custo (R$)")
         st.plotly_chart(fig, use_container_width=True)
 
-    with st.expander("📑 Detalhamento do Empreendimento", expanded=True):
-        df_display = df.rename(columns={"nome": "Nome", "tipo": "Tipo", "rep": "Rep.", "coef": "Coef.", "area": "Área (m²)", "area_eq": "Área Eq. Total (m²)", "area_constr": "Área Constr. (m²)", "custo_direto": "Custo Direto (R$)"})
-        colunas_a_exibir = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total (m²)", "Área Constr. (m²)", "Custo Direto (R$)"]
-        st.dataframe(df_display[colunas_a_exibir], use_container_width=True, hide_index=True,
-            column_config={
-                "Área (m²)": st.column_config.NumberColumn(format="%.2f"), "Área Eq. Total (m²)": st.column_config.NumberColumn(format="%.2f"),
-                "Área Constr. (m²)": st.column_config.NumberColumn(format="%.2f"), "Custo Direto (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
-            })
-
     with st.expander("💸 Custo Direto por Etapa da Obra", expanded=True):
         if 'etapas_percentuais' not in st.session_state:
             etapas_salvas = info.get('etapas_percentuais', {})

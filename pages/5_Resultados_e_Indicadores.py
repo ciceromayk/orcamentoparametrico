@@ -223,21 +223,6 @@ def generate_ai_analysis():
             st.error(f"Ocorreu um erro inesperado: {e}")
     return None
 
-# --- DEFINIÇÃO DO DIALOG (POP-UP) PARA A API KEY ---
-@st.dialog("Adicionar Chave da API")
-def api_key_dialog():
-    st.write("Para usar a análise de I.A., por favor, insira sua chave da API do Google Gemini.")
-    st.markdown("Se você não tem uma, pode obter uma [aqui](https://makersuite.google.com/app/apikey).")
-    
-    with st.form("api_key_form"):
-        api_key = st.text_input("Chave da API", type="password")
-        if st.form_submit_button("Salvar Chave e Continuar"):
-            if api_key:
-                st.session_state.gemini_api_key = api_key
-                st.rerun()
-            else:
-                st.error("Por favor, insira uma chave da API.")
-
 # Adiciona o botão de análise com IA
 if st.button("Gerar Análise de Viabilidade com I.A.", type="primary"):
     if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:

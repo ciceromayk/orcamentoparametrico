@@ -33,6 +33,15 @@ st.markdown("""
         max-height: 400px;
         overflow-y: auto;
     }
+    /* Estilo para centralizar e reduzir a largura do text_input */
+    .stTextInput > div > div {
+        display: flex;
+        justify-content: center;
+    }
+    .stTextInput > div > div > input {
+        width: 150px;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -123,34 +132,37 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
     for hc, title in zip(header_cols, headers):
         hc.markdown(f'<p style="text-align:center; font-size:16px;"><b>{title}</b></p>', unsafe_allow_html=True)
     
-    # Adicionando barra de rolagem para a tabela
-    with st.container(height=450, border=True):
-        # Itera sobre os itens para criar as linhas
-        for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
-            cols = st.columns(col_widths)
-            
-            # Coluna Item (não editável)
-            cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
-            
-            # Coluna Custo Mensal (editável)
-            novo_valor_mensal = cols[1].number_input(
-                "Custo Mensal (R$)",
-                min_value=0.0,
-                value=float(valor_mensal),
-                step=100.0,
-                format="%.2f",
-                key=f"custo_mensal_{item}",
-                label_visibility="collapsed"
-            )
-            
-            # Coluna Custo Total (calculado)
-            custo_total_item = novo_valor_mensal * st.session_state.duracao_obra
-            cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_total_item)}</div>", unsafe_allow_html=True)
-            
-            # Atualiza o session_state se o valor foi alterado
-            if novo_valor_mensal != valor_mensal:
-                st.session_state.custos_indiretos_obra[item] = novo_valor_mensal
-                st.rerun()
+    # Removendo o st.container com scroll
+    # Itera sobre os itens para criar as linhas
+    for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
+        cols = st.columns(col_widths)
+        
+        # Coluna Item (não editável)
+        cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
+        
+        # Coluna Custo Mensal (editável)
+        # Substitui st.number_input por st.text_input para remover botões
+        novo_valor_mensal = cols[1].text_input(
+            "Custo Mensal (R$)",
+            value=f"{valor_mensal:.2f}",
+            key=f"custo_mensal_{item}",
+            label_visibility="collapsed"
+        )
+        
+        # Lógica para converter o valor do input para float com segurança
+        try:
+            novo_valor_mensal_float = float(novo_valor_mensal.replace('.', '').replace(',', '.'))
+        except ValueError:
+            novo_valor_mensal_float = valor_mensal
+        
+        # Coluna Custo Total (calculado)
+        custo_total_item = novo_valor_mensal_float * st.session_state.duracao_obra
+        cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_total_item)}</div>", unsafe_allow_html=True)
+        
+        # Atualiza o session_state se o valor foi alterado
+        if novo_valor_mensal_float != valor_mensal:
+            st.session_state.custos_indiretos_obra[item] = novo_valor_mensal_float
+            st.rerun()
 
     # Salvando no estado da sessão
     info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra

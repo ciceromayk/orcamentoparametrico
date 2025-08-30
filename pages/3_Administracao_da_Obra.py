@@ -132,38 +132,32 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
     for hc, title in zip(header_cols, headers):
         hc.markdown(f'<p style="text-align:center; font-size:16px;"><b>{title}</b></p>', unsafe_allow_html=True)
     
-    # Removendo o st.container com scroll
-    # Itera sobre os itens para criar as linhas
     for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
         cols = st.columns(col_widths)
         
-        # Coluna Item (não editável)
         cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
         
-        # Coluna Custo Mensal (editável)
-        # Substitui st.number_input por st.text_input para remover botões
-        novo_valor_mensal = cols[1].text_input(
+        novo_valor_mensal_str = cols[1].text_input(
             "Custo Mensal (R$)",
-            value=f"{valor_mensal:.2f}",
+            value=f"{valor_mensal:.2f}".replace('.',','),
             key=f"custo_mensal_{item}",
             label_visibility="collapsed"
         )
         
         # Lógica para converter o valor do input para float com segurança
         try:
-            novo_valor_mensal_float = float(novo_valor_mensal.replace('.', '').replace(',', '.'))
+            # Substitui a vírgula por ponto para a conversão
+            novo_valor_mensal_float = float(novo_valor_mensal_str.replace(',', '.'))
         except ValueError:
+            # Se a conversão falhar, usa o valor original e não atualiza
             novo_valor_mensal_float = valor_mensal
         
-        # Coluna Custo Total (calculado)
         custo_total_item = novo_valor_mensal_float * st.session_state.duracao_obra
         cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_total_item)}</div>", unsafe_allow_html=True)
         
-        # Atualiza o session_state se o valor foi alterado
         if novo_valor_mensal_float != valor_mensal:
             st.session_state.custos_indiretos_obra[item] = novo_valor_mensal_float
             st.rerun()
 
-    # Salvando no estado da sessão
     info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra
     info['duracao_obra'] = st.session_state.duracao_obra

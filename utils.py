@@ -121,6 +121,9 @@ def init_session_state_vars(info):
             st.session_state.custos_indiretos_percentuais = {item: {"percentual": val, "fonte": "Manual"} for item, val in custos_salvos.items()}
         else:
             st.session_state.custos_indiretos_percentuais = {item: custos_salvos.get(item, {"percentual": vals[1], "fonte": "Manual"}) for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()}
+    # Adicionando o preço médio de venda ao estado da sessão se não existir
+    if 'preco_medio_venda_m2' not in st.session_state:
+        st.session_state.preco_medio_venda_m2 = info['custos_config'].get('preco_medio_venda_m2', 10000.0)
 
 def calcular_areas_e_custos(pavimentos_list, custos_config):
     pavimentos_df = pd.DataFrame(pavimentos_list)
@@ -152,12 +155,16 @@ class ProjectManager:
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=4)
 
-    def load_json(self):
-        with open(self.path, "r", encoding="utf-8") as f:
+    def load_json(self, path=None):
+        _path = path if path else self.path
+        if not os.path.exists(_path):
+            return []
+        with open(_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def save_json(self, data):
-        with open(self.path, "w", encoding="utf-8") as f:
+    def save_json(self, data, path=None):
+        _path = path if path else self.path
+        with open(_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def list_projects(self):
@@ -199,12 +206,12 @@ if 'project_manager' not in st.session_state:
 def save_to_historico(info, tipo_custo):
     path = HISTORICO_DIRETO_PATH if tipo_custo == 'direto' else HISTORICO_INDIRETO_PATH
     session_key = 'etapas_percentuais' if tipo_custo == 'direto' else 'custos_indiretos_percentuais'
-    historico = load_json(path)
+    historico = st.session_state.project_manager.load_json(path)
     percentuais = {k: v['percentual'] for k, v in info[session_key].items()}
     nova_entrada = { "id": (max(p["id"] for p in historico) + 1) if historico else 1, "nome": info["nome"],
         "data": datetime.now().strftime("%Y-%m-%d"), "percentuais": percentuais }
     historico.append(nova_entrada)
-    save_json(historico, path)
+    st.session_state.project_manager.save_json(historico, path)
     st.toast(f"Custos {tipo_custo} de '{info['nome']}' arquivados no histórico!", icon="📚")
 
 def render_metric_card(title, value, color="#31708f"):
@@ -237,10 +244,6 @@ def render_sidebar(form_key):
     if "projeto_info" in st.session_state:
         info = st.session_state.projeto_info
         st.sidebar.subheader(f"Projeto: {info['nome']}")
-        with st.sidebar.expander("📈 Configurações de Mercado"):
-                custos_config = info.get('custos_config', {})
-                custos_config['preco_medio_venda_m2'] = st.number_input("Preço Médio Venda (R$/m² privativo)", min_value=0.0, value=custos_config.get('preco_medio_venda_m2', 10000.0), format="%.2f")
-                info['custos_config'] = custos_config
         st.sidebar.divider()
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
             if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
@@ -253,7 +256,7 @@ def render_sidebar(form_key):
             if st.button("Arquivar Custos Indiretos", use_container_width=True):
                 info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais; save_to_historico(info, 'indireto')
         if st.sidebar.button("Mudar de Projeto", use_container_width=True):
-            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais"]
+            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais", "preco_medio_venda_m2"]
             for key in keys_to_delete:
                 if key in st.session_state: del st.session_state[key]
             st.switch_page("Início.py")

@@ -30,6 +30,13 @@ st.markdown("""
         max-height: 400px;
         overflow-y: auto;
     }
+    .total-row {
+        background-color: #f0f2f6;
+        padding: 10px 0;
+        margin-top: 20px;
+        font-weight: bold;
+        border-top: 2px solid #e0e0e0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,11 +81,14 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     # Chamando a função centralizada de cálculo
     area_construida_total, area_equivalente_total, _, _ = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
     
+    # Calcular a área privativa total a partir das unidades
+    total_area_privativa_unidades = sum(unidade['area_privativa_total'] for unidade in st.session_state.unidades)
+    
     c1, c2, c3, c4, c5 = st.columns(5)
     cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442", "#5c5c5c"]
     c1.markdown(render_metric_card("Nome", info["nome"], cores[0]), unsafe_allow_html=True)
     c2.markdown(render_metric_card("Área Terreno", f"{fmt_br(info['area_terreno'])} m²", cores[1]), unsafe_allow_html=True)
-    c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(info['area_privativa'])} m²", cores[2]), unsafe_allow_html=True)
+    c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores[2]), unsafe_allow_html=True)
     c4.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[3]), unsafe_allow_html=True)
     c5.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[4]), unsafe_allow_html=True)
 
@@ -95,6 +105,10 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
         hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
+    
+    total_area_pav = 0
+    total_area_eq_pav = 0
+    total_area_constr_pav = 0
 
     with st.container():
         st.markdown('<div class="pavimentos-scrollable-container">', unsafe_allow_html=True)
@@ -121,14 +135,33 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             
             pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
             
-            total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
+            area_total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
+            area_constr_i = area_total_i if pav['constr'] else 0.0
+
             cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
-            cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)
+            cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_constr_i)}</div>", unsafe_allow_html=True)
 
             if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
                 st.session_state.deleting_pav_index = i
                 st.rerun()
+
+            total_area_pav += area_total_i
+            total_area_eq_pav += area_eq_i
+            total_area_constr_pav += area_constr_i
+
         st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.session_state.pavimentos:
+            total_pav_cols = st.columns(col_widths)
+            total_pav_cols[0].markdown(f"<div style='font-weight: bold; text-align: left;'>Total</div>", unsafe_allow_html=True)
+            total_pav_cols[1].empty()
+            total_pav_cols[2].empty()
+            total_pav_cols[3].empty()
+            total_pav_cols[4].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_pav)}</div>", unsafe_allow_html=True)
+            total_pav_cols[5].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_eq_pav)}</div>", unsafe_allow_html=True)
+            total_pav_cols[6].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_constr_pav)}</div>", unsafe_allow_html=True)
+            total_pav_cols[7].empty()
+            total_pav_cols[8].empty()
 
 
     if st.session_state.deleting_pav_index is not None:
@@ -172,17 +205,12 @@ with st.expander("📝 Dados de Unidades", expanded=True):
 
     # Linha de totais com melhorias de estilo
     if st.session_state.unidades:
-        st.markdown("""<div style="
-            background-color: #f0f2f6; /* Cor de fundo levemente cinza */
-            border-top: 2px solid #e0e0e0; /* Borda superior para separar */
-            padding: 10px 0;
-            margin-top: 20px; /* Margem para separar da tabela */
-        ">""", unsafe_allow_html=True)
+        st.markdown("<div class='total-row'>", unsafe_allow_html=True)
         total_cols = st.columns(col_widths)
-        total_cols[0].markdown(f"<div style='font-weight: bold; padding-top: 8px;'>Total</div>", unsafe_allow_html=True)
-        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
+        total_cols[0].markdown(f"<div style='font-weight: bold; text-align:center;'>Total</div>", unsafe_allow_html=True)
+        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; '>{total_quantidade}</div>", unsafe_allow_html=True)
         total_cols[2].empty()
-        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
+        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 

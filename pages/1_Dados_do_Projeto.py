@@ -138,60 +138,51 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 with st.expander("📝 Dados de Unidades", expanded=True):
     b1_un, _ = st.columns([0.2, 0.8])
     if b1_un.button("➕ Adicionar Unidade"):
-        # Cria uma nova entrada na lista de pavimentos com o tipo de unidade padrão
-        nova_unidade = DEFAULT_PAVIMENTO.copy()
-        nova_unidade['tipo'] = 'Área Privativa (Autônoma)'
-        st.session_state.pavimentos.append(nova_unidade)
+        # Adiciona uma nova unidade ao estado da sessão
+        st.session_state.unidades.append({"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0})
         st.rerun()
 
     st.write("### Detalhamento por Tipo de Unidade")
     
-    # Agrupar os dados por tipo de unidade
-    unidades_df = pd.DataFrame(st.session_state.pavimentos)
-    
-    # Remove colunas que não são relevantes para a tabela de unidades
-    unidades_df = unidades_df[unidades_df['tipo'] == 'Área Privativa (Autônoma)']
-    
-    # Agrupar e somar os valores
-    unidades_agrupadas = unidades_df.groupby('nome').agg(
-        quantidade=('rep', 'sum'),
-        area_privativa=('area', 'first') # Pega a primeira área, pois são iguais por nome de unidade
-    ).reset_index()
-
-    # Calcular a área privativa total
-    unidades_agrupadas['area_privativa_total'] = unidades_agrupadas['quantidade'] * unidades_agrupadas['area_privativa']
-
     # Definir as colunas da tabela
-    col_widths = [3, 1.5, 2, 2.5]
-    headers = ["Tipo de Unidade", "Quantidade", "Área Privativa (m²)", "Área Privativa Total (m²)"]
+    col_widths = [3, 1.5, 2, 2.5, 0.8]
+    headers = ["Tipo de Unidade", "Quantidade", "Área Privativa (m²)", "Área Privativa Total (m²)", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
         hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
 
-    # Exibir a tabela
+    # Exibir a tabela com campos editáveis
     total_quantidade = 0
     total_area_privativa_total = 0
-    if not unidades_agrupadas.empty:
-        for index, row in unidades_agrupadas.iterrows():
+    if st.session_state.unidades:
+        for i, unidade in enumerate(st.session_state.unidades):
             cols = st.columns(col_widths)
-            cols[0].markdown(f"<div style='padding-top: 8px;'>{row['nome']}</div>", unsafe_allow_html=True)
-            cols[1].markdown(f"<div style='text-align:center; padding-top: 8px;'>{row['quantidade']}</div>", unsafe_allow_html=True)
-            cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(row['area_privativa'])}</div>", unsafe_allow_html=True)
-            cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(row['area_privativa_total'])}</div>", unsafe_allow_html=True)
-            total_quantidade += row['quantidade']
-            total_area_privativa_total += row['area_privativa_total']
+            
+            unidade['nome'] = cols[0].text_input("nome", unidade['nome'], key=f"unid_nome_{i}", label_visibility="collapsed")
+            unidade['quantidade'] = cols[1].number_input("quantidade", min_value=1, value=unidade['quantidade'], step=1, key=f"unid_qtd_{i}", label_visibility="collapsed")
+            unidade['area_privativa'] = cols[2].number_input("area_priv", min_value=0.0, value=unidade['area_privativa'], step=1.0, format="%.2f", key=f"unid_area_{i}", label_visibility="collapsed")
+            
+            unidade['area_privativa_total'] = unidade['quantidade'] * unidade['area_privativa']
+            cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
+
+            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=True):
+                del st.session_state.unidades[i]
+                st.rerun()
+
+            total_quantidade += unidade['quantidade']
+            total_area_privativa_total += unidade['area_privativa_total']
 
     # Linha de totais
-    if not unidades_agrupadas.empty:
+    if st.session_state.unidades:
         st.markdown("---")
         total_cols = st.columns(col_widths)
         total_cols[0].markdown(f"<div style='font-weight: bold; padding-top: 8px;'>Total</div>", unsafe_allow_html=True)
         total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
-        total_cols[2].empty() # Área privativa individual não tem total
+        total_cols[2].empty()
         total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
 
-
 info['pavimentos'] = st.session_state.pavimentos
+info['unidades'] = st.session_state.unidades
 
 if st.button("Salvar Dados do Projeto", type="primary"):
     save_project(info)

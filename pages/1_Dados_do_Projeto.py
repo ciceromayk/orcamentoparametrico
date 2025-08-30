@@ -4,7 +4,8 @@ from utils import (
     fmt_br, render_metric_card, render_sidebar,
     DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
     init_session_state_vars, calcular_areas_e_custos,
-    CUB_DATA
+    CUB_DATA,
+    ProjectManager # Adicionada a importação de ProjectManager
 )
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
@@ -40,6 +41,10 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Verifica e inicializa o ProjectManager se ele não estiver no estado da sessão
+if 'project_manager' not in st.session_state:
+    st.session_state.project_manager = ProjectManager("projects.json")
 
 if "projeto_info" not in st.session_state:
     st.error("Nenhum projeto carregado. Por favor, selecione um projeto na página inicial.")

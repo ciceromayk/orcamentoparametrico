@@ -142,8 +142,6 @@ with st.expander("📝 Dados de Unidades", expanded=True):
         st.session_state.unidades.append({"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0})
         st.rerun()
 
-    st.write("### Detalhamento por Tipo de Unidade")
-    
     # Definir as colunas da tabela
     col_widths = [3, 1.5, 2, 2.5, 0.8]
     headers = ["Tipo de Unidade", "Quantidade", "Área Privativa (m²)", "Área Privativa Total (m²)", "Ação"]
@@ -180,6 +178,7 @@ with st.expander("📝 Dados de Unidades", expanded=True):
         total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
         total_cols[2].empty()
         total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
+
 
 info['pavimentos'] = st.session_state.pavimentos
 info['unidades'] = st.session_state.unidades

@@ -1,4 +1,3 @@
-# pages/4_Custos_Indiretos.py
 import streamlit as st
 import pandas as pd
 from utils import (
@@ -79,7 +78,10 @@ st.subheader("Análise e Detalhamento de Custos Indiretos do Projeto")
 # Cálculos Preliminares
 custos_config = info.get('custos_config', {})
 preco_medio_venda_m2 = custos_config.get('preco_medio_venda_m2', 10000.0)
-vgv_total = info.get('area_privativa', 0) * preco_medio_venda_m2
+
+# Recalcula a área privativa total com base nos dados das unidades
+total_area_privativa = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
+vgv_total = total_area_privativa * preco_medio_venda_m2
 
 # Recalcula o custo indireto total para exibir no card
 custo_indireto_calculado = 0

@@ -91,10 +91,29 @@ for item, values in st.session_state.custos_indiretos_percentuais.items():
     custo_indireto_calculado += custo_calculado_item
 
 # Layout de duas colunas com contêineres e estilos
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
 col1, col2 = st.columns([2, 1])
 
-# Bloco principal com a tabela manual na coluna 1
+# Bloco com os cards na coluna 2 (movido para cima)
+with col2:
+    st.write("### Resumo Financeiro")
+    with st.container(border=True):
+        st.markdown(render_metric_card(
+            "VGV Total",
+            f"R$ {fmt_br(vgv_total)}",
+            "#007bff"
+        ), unsafe_allow_html=True)
+        st.markdown(render_metric_card(
+            "Custo Indireto Total",
+            f"R$ {fmt_br(custo_indireto_calculado)}",
+            "#28a745"
+        ), unsafe_allow_html=True)
+        st.markdown(render_metric_card(
+            "% do Custo Indireto",
+            f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%",
+            "#ff7f00"
+        ), unsafe_allow_html=True)
+
+# Bloco principal com a tabela manual na coluna 1 (movido para baixo)
 with col1:
     with st.container(border=True):
         st.write("### Ajuste os Percentuais")
@@ -148,29 +167,6 @@ with col1:
             if novo_percentual_float != current_percent:
                 st.session_state.custos_indiretos_percentuais[item]['percentual'] = novo_percentual_float
                 st.rerun()
-
-# Bloco com os cards na coluna 2
-with col2:
-    st.write("### Resumo Financeiro")
-    with st.container(border=True):
-        st.markdown(render_metric_card(
-            "VGV Total",
-            f"R$ {fmt_br(vgv_total)}",
-            "#007bff"
-        ), unsafe_allow_html=True)
-        st.markdown(render_metric_card(
-            "Custo Indireto Total",
-            f"R$ {fmt_br(custo_indireto_calculado)}",
-            "#28a745"
-        ), unsafe_allow_html=True)
-        st.markdown(render_metric_card(
-            "% do Custo Indireto",
-            f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%",
-            "#ff7f00"
-        ), unsafe_allow_html=True)
-    
-
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Atualiza o estado da sessão
 info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais

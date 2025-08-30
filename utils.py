@@ -47,6 +47,18 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
     "Transporte de Materiais e Pessoas": 2500.0, "Despesas de Escritório e Apoio": 800.0,
 }
 
+# --- DADOS MOCADOS CUB E SINAPI (para demonstração) ---
+# Fonte: Dados fictícios com base em valores de mercado aproximados
+CUB_DATA = {
+    "AC": {"R-16": 2800, "P-8": 2600, "COMERCIAL": 3100},
+    "SP": {"R-16": 4500, "P-8": 4200, "COMERCIAL": 5100},
+    "RJ": {"R-16": 4700, "P-8": 4400, "COMERCIAL": 5300},
+    "MG": {"R-16": 3900, "P-8": 3700, "COMERCIAL": 4300},
+    "RS": {"R-16": 3800, "P-8": 3600, "COMERCIAL": 4200},
+}
+# --- FIM DADOS MOCADOS ---
+
+
 # --- FUNÇÕES AUXILIARES ---
 def fmt_br(valor):
     """
@@ -119,10 +131,37 @@ def render_sidebar(form_key):
                 custos_config = info.get('custos_config', {})
                 custos_config['preco_medio_venda_m2'] = st.number_input("Preço Médio Venda (R$/m² privativo)", min_value=0.0, value=custos_config.get('preco_medio_venda_m2', 10000.0), format="%.2f")
                 info['custos_config'] = custos_config
+        
+        # --- NOVO PAINEL CUB/SINAPI ---
+        with st.sidebar.expander("📊 Custo de Construção (CUB/SINAPI)"):
+            st.markdown("<p style='font-size: 14px; text-align: left;'>Selecione uma referência para o custo de construção.</p>", unsafe_allow_html=True)
+            
+            estado = st.selectbox("Estado:", list(CUB_DATA.keys()), key=f"cub_estado_{form_key}")
+            padrao = st.selectbox("Padrão:", list(CUB_DATA.get(estado, {}).keys()), key=f"cub_padrao_{form_key}")
+
+            if estado and padrao:
+                cub_value = CUB_DATA[estado][padrao]
+                st.info(f"O valor de referência para {estado} ({padrao}) é de R$ {fmt_br(cub_value)}/m².")
+                
+                # Botão para aplicar o valor
+                if st.button(f"Usar R$ {fmt_br(cub_value)}/m²", use_container_width=True, key=f"apply_cub_{form_key}"):
+                    info['custos_config']['custo_area_privativa'] = float(cub_value)
+                    st.success("Custo de construção atualizado!")
+                    st.experimental_rerun()
+        # --- FIM NOVO PAINEL ---
+
         with st.sidebar.expander("💰 Configuração de Custos"):
             custos_config = info.get('custos_config', {})
             custos_config['custo_terreno_m2'] = st.number_input("Custo do Terreno por m² (R$)", min_value=0.0, value=custos_config.get('custo_terreno_m2', 2500.0), format="%.2f")
-            custos_config['custo_area_privativa'] = st.number_input("Custo de Construção (R$/m² privativo)", min_value=0.0, value=custos_config.get('custo_area_privativa', 4500.0), step=100.0, format="%.2f")
+            
+            # Campo de custo de construção agora se alinha com o CUB
+            custos_config['custo_area_privativa'] = st.number_input(
+                "Custo de Construção (R$/m² privativo)", 
+                min_value=0.0, 
+                value=custos_config.get('custo_area_privativa', 4500.0), 
+                step=100.0, 
+                format="%.2f"
+            )
             info['custos_config'] = custos_config
         st.sidebar.divider()
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
@@ -139,222 +178,6 @@ def render_sidebar(form_key):
             for key in keys_to_delete:
                 if key in st.session_state: del st.session_state[key]
             st.switch_page("Início.py")
-
-def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_valor, lucratividade_percentual,
-                       custo_direto_total, custo_indireto_calculado, custo_terreno_total, area_construida_total,
-                       custos_config, custos_indiretos_percentuais, pavimentos_df, custo_indireto_obra_total):
-    
-    def create_html_card(title, value, color):
-        return f"""
-        <td style="background-color: {color}; color: white; border-radius: 8px; padding: 15px; text-align: center; width: 25%;">
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">{title}</div>
-            <div style="font-size: 16px; font-weight: bold;">{value}</div>
-        </td>
-        """
-    
-    composicao_custos = [
-        ("Custo Direto", custo_direto_total, '#2ca02c'),
-        ("Custo Indireto (Venda)", custo_indireto_calculado, '#1f77b4'),
-        ("Custo Indireto (Obra)", custo_indireto_obra_total, '#6f42c1'),
-        ("Custo do Terreno", custo_terreno_total, '#ff7f0e')
-    ]
-    
-    total_custos_composicao = sum(c[1] for c in composicao_custos)
-    
-    tabela_composicao_html = ""
-    for label, valor, cor in composicao_custos:
-        percentual = (valor / total_custos_composicao) * 100 if total_custos_composicao > 0 else 0
-        tabela_composicao_html += f"""
-        <td style="background-color: {cor}; color: white; border-radius: 8px; padding: 15px; text-align: center; width: 25%;">
-            <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{label} ({percentual:.1f}%)</div>
-            <div style="font-size: 18px; font-weight: bold;">R$ {fmt_br(valor)}</div>
-        </td>
-        """
-        
-    tabela_pavimentos_html = ""
-    tabela_etapas_html = ""
-    tabela_custos_indiretos_html = ""
-    
-    if not pavimentos_df.empty:
-        total_area = pavimentos_df["area"].sum()
-        total_area_eq = pavimentos_df["area_eq"].sum()
-        total_area_constr = pavimentos_df["area_constr"].sum()
-        
-        for index, row in pavimentos_df.iterrows():
-            tabela_pavimentos_html += f"""
-            <tr>
-                <td>{row['nome']}</td>
-                <td>{row['tipo']}</td>
-                <td style="text-align: center;">{row['rep']}</td>
-                <td style="text-align: right;">{row['coef']:.2f}</td>
-                <td style="text-align: right;">{fmt_br(row['area'])} m²</td>
-                <td style="text-align: right;">{fmt_br(row['area_eq'])} m²</td>
-                <td style="text-align: right;">{fmt_br(row['area_constr'])} m²</td>
-            </tr>
-            """
-        tabela_pavimentos_html += f"""
-        <tr style="font-weight: bold; background-color: #f2f2f2;">
-            <td colspan="4">Total</td>
-            <td style="text-align: right;">{fmt_br(total_area)} m²</td>
-            <td style="text-align: right;">{fmt_br(total_area_eq)} m²</td>
-            <td style="text-align: right;">{fmt_br(total_area_constr)} m²</td>
-        </tr>
-        """
-    
-    if info.get('etapas_percentuais'):
-        total_custo_etapas = 0
-        total_percentual_etapas = 0
-        for etapa, (min_val, default_val, max_val) in ETAPAS_OBRA.items():
-            percentual = info['etapas_percentuais'].get(etapa, {}).get('percentual', 0)
-            custo = custo_direto_total * (float(percentual) / 100)
-            tabela_etapas_html += f"""
-            <tr>
-                <td>{etapa}</td>
-                <td style="text-align: right;">{percentual:.2f}%</td>
-                <td style="text-align: right;">R$ {fmt_br(custo)}</td>
-            </tr>
-            """
-            total_custo_etapas += custo
-            total_percentual_etapas += percentual
-        tabela_etapas_html += f"""
-        <tr style="font-weight: bold; background-color: #f2f2f2;">
-            <td>Total</td>
-            <td style="text-align: right;">{total_percentual_etapas:.2f}%</td>
-            <td style="text-align: right;">R$ {fmt_br(total_custo_etapas)}</td>
-        </tr>
-        """
-    
-    if custos_indiretos_percentuais:
-        total_custo_indireto = 0
-        total_percentual_indireto = 0
-        for item, values in custos_indiretos_percentuais.items():
-            percentual = values.get('percentual', 0)
-            custo = vgv_total * (float(percentual) / 100)
-            tabela_custos_indiretos_html += f"""
-            <tr>
-                <td>{item}</td>
-                <td style="text-align: right;">{percentual:.2f}%</td>
-                <td style="text-align: right;">R$ {fmt_br(custo)}</td>
-            </tr>
-            """
-            total_custo_indireto += custo
-            total_percentual_indireto += percentual
-        tabela_custos_indiretos_html += f"""
-        <tr style="font-weight: bold; background-color: #f2f2f2;">
-            <td>Total</td>
-            <td style="text-align: right;">{total_percentual_indireto:.2f}%</td>
-            <td style="text-align: right;">R$ {fmt_br(total_custo_indireto)}</td>
-        </tr>
-        """
-    
-    relacao_ac_priv = area_construida_total / info.get('area_privativa', 1) if info.get('area_privativa', 1) > 0 else 0
-    
-    html_string = f"""
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-            @page {{ size: A4; margin: 1.5cm; @top-center {{ content: "Relatório de Viabilidade - {info.get('nome', 'N/A')}"; font-family: 'Roboto', sans-serif; font-size: 14px; color: #888; }} @bottom-right {{ content: "Página " counter(page) " de " counter(pages); font-family: 'Roboto', sans-serif; font-size: 10px; color: #888; }} }}
-            body {{ font-family: 'Roboto', sans-serif; color: #333; }}
-            .cover-page {{ height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always; }}
-            .cover-page h1 {{ font-size: 36px; color: #1a5276; margin-bottom: 20px; }}
-            .cover-page h2 {{ font-size: 28px; color: #1f618d; margin-bottom: 40px; }}
-            .cover-page p {{ font-size: 16px; color: #555; }}
-            .page-break {{ page-break-before: always; }}
-            h2.section-title {{ color: #1f618d; border-bottom: 2px solid #aed6f1; padding-bottom: 5px; margin-top: 30px; margin-bottom: 20px; }}
-            table.card-container {{ width: 100%; border-spacing: 10px; margin-bottom: 20px; }}
-            table.data-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            table.data-table th, table.data-table td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            table.data-table th {{ background-color: #f2f2f2; font-weight: bold; font-size: 11px; }}
-            table.data-table td {{ font-size: 10px; }}
-            table.data-table tbody tr:nth-child(odd) {{ background-color: #f9f9f9; }}
-            table.data-table tbody tr:hover {{ background-color: #f1f1f1; }}
-        </style>
-    </head>
-    <body>
-        <div class="cover-page">
-            <h1>Relatório de Viabilidade de Empreendimento</h1>
-            <h2>{info.get('nome', 'N/A')}</h2>
-            <p>Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-        </div>
-        <h2 class="section-title">Resumo Financeiro e de Área</h2>
-        <table class="card-container">
-            <tr>
-                {create_html_card("VGV Total", f"R$ {fmt_br(vgv_total)}", "#00829d")}
-                {create_html_card("Custo Total", f"R$ {fmt_br(valor_total_despesas)}", "#6a42c1")}
-                {create_html_card("Lucro Bruto", f"R$ {fmt_br(lucratividade_valor)}", "#3c763d")}
-                {create_html_card("Margem de Lucro", f"{lucratividade_percentual:.2f}%", "#a94442")}
-            </tr>
-        </table>
-        <h2 class="section-title">Dados de Área e Venda</h2>
-        <table class="card-container">
-            <tr>
-                {create_html_card("Área Privativa", f"{fmt_br(info.get('area_privativa', 0))} m²", "#1f77b4")}
-                {create_html_card("Área Construída", f"{fmt_br(area_construida_total)} m²", "#ff7f0e")}
-                {create_html_card("Preço Venda / m²", f"R$ {fmt_br(custos_config.get('preco_medio_venda_m2', 0))}", "#2ca02c")}
-                {create_html_card("Relação AC/AP", f"{relacao_ac_priv:.2f}", "#d62728")}
-            </tr>
-        </table>
-        <h2 class="section-title">Composição do Custo Total</h2>
-        <table class="card-container">
-            <tr>
-                {create_html_card(f"Custo Direto ({custo_direto_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0:.2f}%)", f"R$ {fmt_br(custo_direto_total)}", "#31708f")}
-                {create_html_card(f"Indiretos Venda ({custo_indireto_calculado / valor_total_despesas * 100 if valor_total_despesas > 0 else 0:.2f}%)", f"R$ {fmt_br(custo_indireto_calculado)}", "#8a6d3b")}
-                {create_html_card(f"Indiretos Obra ({custo_indireto_obra_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0:.2f}%)", f"R$ {fmt_br(custo_indireto_obra_total)}", "#6f42c1")}
-                {create_html_card(f"Custo do Terreno ({custo_terreno_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0:.2f}%)", f"R$ {fmt_br(custo_terreno_total)}", "#ff7f0e")}
-            </tr>
-        </table>
-        <div class="page-break"></div>
-        <h2 class="section-title">Detalhamento dos Pavimentos</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th style="width: 10%;">Nome</th>
-                    <th style="width: 32.50%;">Tipo</th>
-                    <th style="width: 4%; text-align: center;">Rep.</th>
-                    <th style="width: 4%; text-align: right;">Coef.</th>
-                    <th style="width: 14.75%; text-align: right;">Área (m²)</th>
-                    <th style="width: 18.00%; text-align: right;">Área Eq. Total (m²)</th>
-                    <th style="width: 16.75%; text-align: right;">Área Constr. (m²)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {tabela_pavimentos_html}
-            </tbody>
-        </table>
-        <div class="page-break"></div>
-        <h2 class="section-title">Custo Direto por Etapa da Obra</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Etapa</th>
-                    <th style="text-align: right;">Percentual (%)</th>
-                    <th style="text-align: right;">Custo (R$)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {tabela_etapas_html}
-            </tbody>
-        </table>
-        <div class="page-break"></div>
-        <h2 class="section-title">Detalhamento dos Custos Indiretos</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th style="text-align: right;">Percentual (%)</th>
-                    <th style="text-align: right;">Custo (R$)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {tabela_custos_indiretos_html}
-            </tbody>
-        </table>
-    </body>
-    </html>
-    """
-    return HTML(string=html_string).write_pdf()
 
 class ProjectManager:
     def __init__(self):

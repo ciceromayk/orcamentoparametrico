@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
-    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO, save_project,
+    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
     init_session_state_vars, calcular_areas_e_custos
 )
 
@@ -184,5 +184,5 @@ info['pavimentos'] = st.session_state.pavimentos
 info['unidades'] = st.session_state.unidades
 
 if st.button("Salvar Dados do Projeto", type="primary"):
-    save_project(info)
+    st.session_state.project_manager.save_project(info)
     st.success("Dados do projeto salvos com sucesso!")

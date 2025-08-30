@@ -1,13 +1,14 @@
-# Início.py
 import streamlit as st
 from datetime import datetime
 from utils import (
-    init_storage, ProjectManager,
+    ProjectManager,
     DEFAULT_PAVIMENTO, ETAPAS_OBRA, DEFAULT_CUSTOS_INDIRETOS, DEFAULT_CUSTOS_INDIRETOS_FIXOS
 )
 
 st.set_page_config(page_title="Estudo de Viabilidade", layout="wide")
-init_storage("projects.json")
+
+# Inicializa o gerenciador de projetos. A chamada init_storage() é feita internamente.
+project_manager = ProjectManager("projects.json")
 
 # Injeta CSS para esconder o menu automático
 st.markdown("""
@@ -17,9 +18,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Inicializa a classe ProjectManager no estado da sessão
-if 'project_manager' not in st.session_state:
-    st.session_state.project_manager = ProjectManager()
 
 # --- DEFINIÇÃO DO DIALOG (POP-UP) ---
 @st.dialog("Criar Novo Projeto")
@@ -45,7 +43,7 @@ def new_project_dialog():
                     "custos_indiretos_percentuais": {item: {"percentual": vals[1], "fonte": "Manual"} for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()},
                     "custos_indiretos_fixos": DEFAULT_CUSTOS_INDIRETOS_FIXOS.copy()
                 }
-                st.session_state.project_manager.save_project(info)
+                project_manager.save_project(info)
                 st.session_state.projeto_info = info
                 st.rerun()
 
@@ -62,7 +60,7 @@ def page_project_selection():
     
     st.subheader("📂 Projetos Existentes")
     
-    projetos = st.session_state.project_manager.list_projects()
+    projetos = project_manager.list_projects()
     if not projetos:
         st.info("Nenhum projeto encontrado.")
     else:
@@ -82,11 +80,11 @@ def page_project_selection():
             cols[2].write(data_criacao)
             
             if cols[3].button("Carregar", key=f"load_{proj['id']}", use_container_width=True):
-                st.session_state.projeto_info = st.session_state.project_manager.load_project(proj['id'])
+                st.session_state.projeto_info = project_manager.load_project(proj['id'])
                 st.switch_page("pages/1_Dados_do_Projeto.py")
 
             if cols[4].button("🗑️", key=f"delete_{proj['id']}", use_container_width=True, help=f"Excluir projeto '{proj['nome']}'"):
-                st.session_state.project_manager.delete_project(proj['id'])
+                project_manager.delete_project(proj['id'])
                 st.rerun()
 
 # A função page_project_selection agora é a única a ser chamada, sem roteamento condicional

@@ -69,6 +69,24 @@ lucratividade_valor = vgv_total - valor_total_despesas
 lucratividade_percentual = (lucratividade_valor / vgv_total) * 100 if vgv_total > 0 else 0
 
 # --- APRESENTAÇÃO DOS RESULTADOS ---
+
+# Adicionando a nova seção de Resumo do Empreendimento
+with st.container(border=True):
+    st.subheader("Resumo do Empreendimento")
+    # Tenta obter a área privativa total das unidades, se houver
+    total_area_privativa_unidades = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
+    # Calcula o Índice AC/AP
+    relacao_ac_ap = area_construida_total / total_area_privativa_unidades if total_area_privativa_unidades > 0 else 0
+    num_unidades = info.get('num_unidades', 0)
+    
+    resumo_cols = st.columns(4)
+    cores_resumo = ["#3c763d", "#a94442", "#5c5c5c", "#1f77b4"]
+    resumo_cols[0].markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores_resumo[0]), unsafe_allow_html=True)
+    resumo_cols[1].markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores_resumo[1]), unsafe_allow_html=True)
+    resumo_cols[2].markdown(render_metric_card("Índice AC / AP", f"{relacao_ac_ap:.2f}", cores_resumo[2]), unsafe_allow_html=True)
+    resumo_cols[3].markdown(render_metric_card("Nº de Unidades", f"{num_unidades}", cores_resumo[3]), unsafe_allow_html=True)
+    
+
 with st.container(border=True):
     cores = ["#00829d", "#6a42c1", "#3c763d", "#a94442", "#fd7e14", "#20c997", "#31708f", "#8a6d3b"]
     st.subheader("Resultados Financeiros")
@@ -114,7 +132,7 @@ def generate_ai_analysis():
         "custo_indireto_venda": custo_indireto_calculado,
         "custo_indireto_obra": custo_indireto_obra_total,
         "custo_terreno": custo_terreno_total,
-        "area_privativa": info.get('area_privativa', 0),
+        "area_privativa": total_area_privativa_unidades,
         "area_terreno": info.get('area_terreno', 0),
         "area_construida": area_construida_total,
         "composicao_custos": {
@@ -222,6 +240,21 @@ def generate_ai_analysis():
         except Exception as e:
             st.error(f"Ocorreu um erro inesperado: {e}")
     return None
+
+# --- DEFINIÇÃO DO DIALOG (POP-UP) PARA A API KEY ---
+@st.dialog("Adicionar Chave da API")
+def api_key_dialog():
+    st.write("Para usar a análise de I.A., por favor, insira sua chave da API do Google Gemini.")
+    st.markdown("Se você não tem uma, pode obter uma [aqui](https://makersuite.google.com/app/apikey).")
+    
+    with st.form("api_key_form"):
+        api_key = st.text_input("Chave da API", type="password")
+        if st.form_submit_button("Salvar Chave e Continuar"):
+            if api_key:
+                st.session_state.gemini_api_key = api_key
+                st.rerun()
+            else:
+                st.error("Por favor, insira uma chave da API.")
 
 # Adiciona o botão de análise com IA
 if st.button("Gerar Análise de Viabilidade com I.A.", type="primary"):

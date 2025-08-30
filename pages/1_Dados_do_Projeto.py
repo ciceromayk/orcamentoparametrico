@@ -133,10 +133,11 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
             pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
             
-            pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
+            # Use um callback para disparar o rerun quando o checkbox mudar
+            cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed", on_change=st.rerun)
             
             area_total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
-            area_constr_i = area_total_i if pav['constr'] else 0.0
+            area_constr_i = area_total_i if pav.get('constr', True) else 0.0
 
             cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
             cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_constr_i)}</div>", unsafe_allow_html=True)
@@ -153,7 +154,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
         if st.session_state.pavimentos:
             total_pav_cols = st.columns(col_widths)
-            total_pav_cols[0].markdown(f"<div style='font-weight: bold; text-align: left;'>Total</div>", unsafe_allow_html=True)
+            total_pav_cols[0].markdown(f"<div style='font-weight: bold; text-align: center;'>Total</div>", unsafe_allow_html=True)
             total_pav_cols[1].empty()
             total_pav_cols[2].empty()
             total_pav_cols[3].empty()

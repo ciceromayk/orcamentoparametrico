@@ -39,7 +39,7 @@ st.markdown("""
         justify-content: center;
     }
     .stTextInput > div > div > input {
-        width: 150px;
+        width: 100px;
         text-align: center;
     }
 </style>

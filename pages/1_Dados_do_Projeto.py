@@ -170,14 +170,20 @@ with st.expander("📝 Dados de Unidades", expanded=True):
             total_quantidade += unidade['quantidade']
             total_area_privativa_total += unidade['area_privativa_total']
 
-    # Linha de totais
+    # Linha de totais com melhorias de estilo
     if st.session_state.unidades:
-        st.markdown("---")
+        st.markdown("""<div style="
+            background-color: #f0f2f6; /* Cor de fundo levemente cinza */
+            border-top: 2px solid #e0e0e0; /* Borda superior para separar */
+            padding: 10px 0;
+            margin-top: 20px; /* Margem para separar da tabela */
+        ">""", unsafe_allow_html=True)
         total_cols = st.columns(col_widths)
         total_cols[0].markdown(f"<div style='font-weight: bold; padding-top: 8px;'>Total</div>", unsafe_allow_html=True)
         total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
         total_cols[2].empty()
         total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 info['pavimentos'] = st.session_state.pavimentos

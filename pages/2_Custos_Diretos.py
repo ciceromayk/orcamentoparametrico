@@ -4,8 +4,8 @@ import pandas as pd
 import plotly.express as px
 from utils import (
     fmt_br, render_metric_card, render_sidebar, handle_percentage_redistribution,
-    DEFAULT_PAVIMENTO, ETAPAS_OBRA,
-    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos
+    ETAPAS_OBRA,
+    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager, CUB_DATA
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
@@ -29,8 +29,9 @@ st.subheader("Análise e Detalhamento de Custos da Obra")
 area_construida_total, _, custo_direto_total, pavimentos_df = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
 
 custo_indireto_obra_total = 0
-for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
-    custo_indireto_obra_total += valor_mensal * st.session_state.duracao_obra
+if 'custos_indiretos_obra' in st.session_state and 'duracao_obra' in st.session_state:
+    for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
+        custo_indireto_obra_total += valor_mensal * st.session_state.duracao_obra
 
 custo_direto_total_final = custo_direto_total
 
@@ -53,7 +54,7 @@ if not pavimentos_df.empty:
 
     with st.expander("💸 Custo Direto por Etapa da Obra", expanded=True):
         st.markdown("##### Comparativo com Histórico de Obras")
-        obras_historicas = load_json("historico_direto.json")
+        obras_historicas = st.session_state.project_manager.load_json(st.session_state.project_manager.HISTORICO_DIRETO_PATH)
         obra_ref_selecionada = st.selectbox("Usar como Referência:", ["Nenhuma"] + [f"{o['id']} – {o['nome']}" for o in obras_historicas], index=0, key="ref_direto")
         
         ref_percentuais, ref_nome = {}, None

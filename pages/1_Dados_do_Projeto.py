@@ -111,6 +111,9 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['custos_config']['custo_terreno_m2'] = st.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
         info['custos_config']['custo_area_privativa'] = st.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
 
+        # Adicionado o campo para o Preço Médio de Venda aqui
+        info['custos_config']['preco_medio_venda_m2'] = st.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
+
         submitted = st.form_submit_button("Atualizar Dados", use_container_width=True, type="primary")
         if submitted:
             st.session_state.project_manager.save_project(info)

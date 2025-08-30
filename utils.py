@@ -238,13 +238,12 @@ def handle_percentage_redistribution(session_key, constants_dict):
 
 def render_sidebar(form_key):
     st.sidebar.title("Estudo de Viabilidade")
-    st.sidebar.divider()
     
     # Seção para carregar/editar projetos
     if "projeto_info" in st.session_state:
         info = st.session_state.projeto_info
         st.sidebar.subheader(f"Projeto: {info['nome']}")
-        st.sidebar.divider()
+        st.sidebar.markdown("---")
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
             if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
             if 'custos_indiretos_percentuais' in st.session_state: info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais

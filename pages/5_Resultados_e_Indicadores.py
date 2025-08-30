@@ -151,44 +151,41 @@ def generate_ai_analysis():
     }
 
     prompt = f"""
-    Você está atuando como um consultor especializado em análises de viabilidade econômica no setor de desenvolvimento imobiliário. O objetivo é realizar um estudo de viabilidade detalhado para o projeto, identificando os riscos e benefícios envolvidos.
+Você está atuando como um consultor sênior em análise de viabilidade para o setor de desenvolvimento imobiliário. Sua tarefa é gerar um relatório analítico e detalhado em português, utilizando os dados financeiros fornecidos.
 
-    Por favor, aborde os seguintes pontos na sua análise, utilizando os dados fornecidos:
-    
-    1. Análise de Custos
-    Identifique os principais custos do projeto com base na composição de custos. Descreva como cada componente (Custo Direto, Custo Indireto de Venda, Custo Indireto de Obra e Custo do Terreno) contribui para o custo total, em termos de valor e porcentagem.
-    
-    2. Análise de Receita e Mercado
-    Identifique a receita principal do projeto (VGV) e analise os fatores que podem afetá-la, como o preço médio de venda por m² e a área privativa total. Comente sobre como as tendências do mercado imobiliário podem influenciar essa receita.
-    
-    3. Análise de Riscos Financeiros
-    Liste os riscos financeiros potenciais associados a um projeto imobiliário, como flutuações de custos, alterações nas taxas de juros de financiamento e mudanças na demanda do mercado.
-    
-    4. Projeção de Retorno e Comparativo
-    Analise o retorno financeiro do projeto (Lucro Bruto e Margem de Lucro). Compare a Margem de Lucro com os benchmarks de mercado: "{benchmark_data['profit_margin_benchmark']}".
-    
-    5. Recomendações Estratégicas
-    Ofereça de 3 a 5 recomendações estratégicas para melhorar a viabilidade do projeto. As recomendações devem ser específicas e acionáveis, como oportunidades para reduzir custos ou aumentar receitas.
-    
-    6. Conclusão e Próximos Passos
-    Forneça uma conclusão que resuma suas principais descobertas e ofereça uma perspectiva sobre os próximos passos para o projeto, como aprofundamento do estudo de mercado ou detalhamento de projetos executivos.
+Por favor, siga esta estrutura e aborde os seguintes pontos na análise:
 
-    Apresente sua resposta no formato de uma estrutura passo a passo, organizando as informações de maneira lógica e sequencial. Mantenha um tom formal e técnico ao longo do texto.
+1. **Avaliação Financeira do Projeto**
+   Faça uma análise da saúde financeira geral do projeto. Comente sobre o VGV Total, o Custo Total, o Lucro Bruto e, principalmente, a Margem de Lucro do projeto. Compare a margem de lucro com os benchmarks de mercado para determinar se o resultado é promissor.
 
-    Dados do Projeto:
-    - Nome: {prompt_data['nome_projeto']}
-    - VGV Total: R$ {prompt_data['vgv_total']:.2f}
-    - Custo Total: R$ {prompt_data['custo_total']:.2f}
-    - Lucro Bruto: R$ {prompt_data['lucro_bruto']:.2f}
-    - Margem de Lucro: {prompt_data['margem_lucro_percentual']:.2f}%
-    - Custo Direto: R$ {prompt_data['custo_direto']:.2f}
-    - Custo Indireto de Venda: R$ {prompt_data['custo_indireto_venda']:.2f}
-    - Custo Indireto de Obra: R$ {prompt_data['custo_indireto_obra']:.2f}
-    - Custo do Terreno: R$ {prompt_data['custo_terreno']:.2f}
-    - Área Privativa: {prompt_data['area_privativa']:.2f} m²
-    - Área Construída: {prompt_data['area_construida']:.2f} m²
-    - Composição do Custo (%): {prompt_data['composicao_custos']}
-    """
+2. **Análise Detalhada dos Custos**
+   Analise a composição do Custo Total. Descreva como cada componente (Custo Direto, Custo Indireto de Venda, Custo Indireto de Obra e Custo do Terreno) impacta a rentabilidade do projeto. Interprete as porcentagens para destacar a distribuição dos gastos.
+
+3. **Análise de Desempenho por Área e Custo Unitário**
+   Avalie os indicadores por área construída, como o Custo Direto / m², Custo Indireto / m² e Custo Total / m². Explique o significado do Índice AC / AP e como ele se relaciona com a eficiência e o custo do projeto.
+
+4. **Identificação de Riscos e Oportunidades**
+   Aponte os principais riscos financeiros com base nos dados. Sugira pelo menos 3 a 5 recomendações estratégicas e acionáveis para otimizar o projeto, focando em oportunidades de redução de custos ou aumento de receita.
+
+5. **Conclusão e Próximos Passos**
+   Conclua o relatório com um resumo das descobertas mais importantes e forneça uma perspectiva clara sobre a viabilidade geral do projeto, além de sugerir os próximos passos para a sua execução.
+
+Mantenha um tom formal, técnico e objetivo. Use as métricas e valores fornecidos nos dados para fundamentar sua análise e suas recomendações.
+
+**Dados do Projeto:**
+- Nome: {prompt_data['nome_projeto']}
+- VGV Total: R$ {prompt_data['vgv_total']:.2f}
+- Custo Total: R$ {prompt_data['custo_total']:.2f}
+- Lucro Bruto: R$ {prompt_data['lucro_bruto']:.2f}
+- Margem de Lucro: {prompt_data['margem_lucro_percentual']:.2f}%
+- Custo Direto: R$ {prompt_data['custo_direto']:.2f}
+- Custo Indireto de Venda: R$ {prompt_data['custo_indireto_venda']:.2f}
+- Custo Indireto de Obra: R$ {prompt_data['custo_indireto_obra']:.2f}
+- Custo do Terreno: R$ {prompt_data['custo_terreno']:.2f}
+- Área Privativa: {prompt_data['area_privativa']:.2f} m²
+- Área Construída: {prompt_data['area_construida']:.2f} m²
+- Composição do Custo (%): {prompt_data['composicao_custos']}
+"""
     
     # Adiciona a exibição de loading
     with st.spinner("Gerando análise com I.A...."):

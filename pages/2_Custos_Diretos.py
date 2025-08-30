@@ -5,7 +5,7 @@ import plotly.express as px
 from utils import (
     fmt_br, render_metric_card, render_sidebar, handle_percentage_redistribution,
     ETAPAS_OBRA,
-    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager, CUB_DATA
+    init_session_state_vars, calcular_areas_e_custos, ProjectManager, CUB_DATA, save_to_historico
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
@@ -54,6 +54,7 @@ if not pavimentos_df.empty:
 
     with st.expander("💸 Custo Direto por Etapa da Obra", expanded=True):
         st.markdown("##### Comparativo com Histórico de Obras")
+        # CORRIGIDO: Usa o método load_json da instância de ProjectManager
         obras_historicas = st.session_state.project_manager.load_json(st.session_state.project_manager.HISTORICO_DIRETO_PATH)
         obra_ref_selecionada = st.selectbox("Usar como Referência:", ["Nenhuma"] + [f"{o['id']} – {o['nome']}" for o in obras_historicas], index=0, key="ref_direto")
         

@@ -3,10 +3,7 @@ import streamlit as st
 import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar, DEFAULT_CUSTOS_INDIRETOS_OBRA,
-    DEFAULT_CUSTOS_INDIRETOS, ETAPAS_OBRA, DEFAULT_PAVIMENTO,
-    list_projects, save_project, load_project, delete_project,
-    JSON_PATH, HISTORICO_DIRETO_PATH, HISTORICO_INDIRETO_PATH,
-    load_json, save_to_historico
+    load_json, save_to_historico, init_session_state_vars
 )
 
 st.set_page_config(page_title="Administração da Obra", layout="wide", page_icon="📝")
@@ -41,6 +38,22 @@ st.markdown("""
     .stTextInput > div > div > input {
         width: 100px; /* Largura ajustada para 100px */
         text-align: center;
+    }
+    .main-container {
+        display: flex;
+        flex-direction: row;
+        gap: 20px;
+        padding: 20px;
+    }
+    .left-panel {
+        flex: 2;
+    }
+    .right-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding-top: 50px; /* Alinha os cards com o topo da tabela */
     }
 </style>
 """, unsafe_allow_html=True)

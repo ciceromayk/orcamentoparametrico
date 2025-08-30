@@ -4,10 +4,8 @@ import pandas as pd
 import plotly.express as px
 from utils import (
     fmt_br, render_metric_card, render_sidebar, handle_percentage_redistribution,
-    list_projects, save_project, load_project, delete_project,
-    DEFAULT_PAVIMENTO, ETAPAS_OBRA, DEFAULT_CUSTOS_INDIRETOS, DEFAULT_CUSTOS_INDIRETOS_FIXOS,
-    DEFAULT_CUSTOS_INDIRETOS_OBRA, JSON_PATH, HISTORICO_DIRETO_PATH, HISTORICO_INDIRETO_PATH,
-    load_json, save_to_historico, TIPOS_PAVIMENTO, init_session_state_vars, calcular_areas_e_custos
+    DEFAULT_PAVIMENTO, ETAPAS_OBRA,
+    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
@@ -55,7 +53,7 @@ if not pavimentos_df.empty:
 
     with st.expander("💸 Custo Direto por Etapa da Obra", expanded=True):
         st.markdown("##### Comparativo com Histórico de Obras")
-        obras_historicas = load_json(HISTORICO_DIRETO_PATH)
+        obras_historicas = load_json("historico_direto.json")
         obra_ref_selecionada = st.selectbox("Usar como Referência:", ["Nenhuma"] + [f"{o['id']} – {o['nome']}" for o in obras_historicas], index=0, key="ref_direto")
         
         ref_percentuais, ref_nome = {}, None

@@ -9,17 +9,7 @@ import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 
-# --- CONSTANTES GLOBAIS e outras funções ---
-
-def fmt_br(valor):
-    """
-    Formata um valor numérico para a moeda brasileira (R$) de forma independente do locale.
-    """
-    if pd.isna(valor) or valor is None:
-        return "0,00"
-    s = f"{valor:,.2f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
-
+# --- CONSTANTES GLOBAIS ---
 JSON_PATH = "projects.json"
 HISTORICO_DIRETO_PATH = "historico_direto.json"
 HISTORICO_INDIRETO_PATH = "historico_indireto.json"
@@ -34,124 +24,52 @@ TIPOS_PAVIMENTO = {
 DEFAULT_PAVIMENTO = {"nome": "Pavimento Tipo", "tipo": "Área Privativa (Autônoma)", "rep": 1, "coef": 1.00, "area": 100.0, "constr": True}
 
 ETAPAS_OBRA = {
-    "Serviços Preliminares e Fundações":        (7.0, 8.0, 9.0),
-    "Estrutura (Supraestrutura)":               (14.0, 16.0, 22.0),
-    "Vedações (Alvenaria)":                     (8.0, 10.0, 15.0),
-    "Cobertura e Impermeabilização":            (4.0, 5.0, 8.0),
-    "Revestimentos de Fachada":                 (5.0, 6.0, 10.0),
-    "Instalações (Elétrica e Hidráulica)":      (12.0, 15.0, 18.0),
-    "Esquadrias (Portas e Janelas)":            (6.0, 8.0, 12.0),
-    "Revestimentos de Piso":                    (8.0, 10.0, 15.0),
-    "Revestimentos de Parede":                  (6.0, 8.0, 12.0),
-    "Revestimentos de Forro":                   (3.0, 4.0, 6.0),
-    "Pintura":                                  (4.0, 5.0, 8.0),
-    "Serviços Complementares e Externos":       (3.0, 5.0, 10.0)
+    "Serviços Preliminares e Fundações": (7.0, 8.0, 9.0), "Estrutura (Supraestrutura)": (14.0, 16.0, 22.0),
+    "Vedações (Alvenaria)": (8.0, 10.0, 15.0), "Cobertura e Impermeabilização": (4.0, 5.0, 8.0),
+    "Revestimentos de Fachada": (5.0, 6.0, 10.0), "Instalações (Elétrica e Hidráulica)": (12.0, 15.0, 18.0),
+    "Esquadrias (Portas e Janelas)": (6.0, 8.0, 12.0), "Revestimentos de Piso": (8.0, 10.0, 15.0),
+    "Revestimentos de Parede": (6.0, 8.0, 12.0), "Revestimentos de Forro": (3.0, 4.0, 6.0),
+    "Pintura": (4.0, 5.0, 8.0), "Serviços Complementares e Externos": (3.0, 5.0, 10.0)
 }
 
 DEFAULT_CUSTOS_INDIRETOS = {
-    "IRPJ/ CS/ PIS/ COFINS":        (3.0, 4.0, 6.0),
-    "Corretagem":                   (3.0, 3.61, 5.0),
-    "Publicidade":                  (0.5, 0.9, 2.0),
-    "Manutenção":                   (0.3, 0.5, 1.0),
-    "Custo Fixo da Incorporadora": (3.0, 4.0, 6.0),
-    "Assessoria Técnica":           (0.5, 0.7, 1.5),
-    "Projetos":                     (0.4, 0.52, 1.5),
-    "Licenças e Incorporação":      (0.1, 0.2, 0.5),
-    "Outorga Onerosa":              (0.0, 0.0, 10.0),
-    "Condomínio":                   (0.0, 0.0, 0.5),
-    "IPTU":                         (0.05, 0.07, 0.2),
-    "Preparação do Terreno":        (0.2, 0.33, 1.0),
-    "Financiamento Bancário":       (1.0, 1.9, 3.0),
+    "IRPJ/ CS/ PIS/ COFINS": (3.0, 4.0, 6.0), "Corretagem": (3.0, 3.61, 5.0),
+    "Publicidade": (0.5, 0.9, 2.0), "Manutenção": (0.3, 0.5, 1.0), "Custo Fixo da Incorporadora": (3.0, 4.0, 6.0),
+    "Assessoria Técnica": (0.5, 0.7, 1.5), "Projetos": (0.4, 0.52, 1.5),
+    "Licenças e Incorporação": (0.1, 0.2, 0.5), "Outorga Onerosa": (0.0, 0.0, 10.0), "Condomínio": (0.0, 0.0, 0.5),
+    "IPTU": (0.05, 0.07, 0.2), "Preparação do Terreno": (0.2, 0.33, 1.0), "Financiamento Bancário": (1.0, 1.9, 3.0),
 }
 DEFAULT_CUSTOS_INDIRETOS_FIXOS = {}
 DEFAULT_CUSTOS_INDIRETOS_OBRA = {
-    "Administração de Obra (Engenheiro/Arquiteto)": 15000.0,
-    "Mestre de Obras e Encarregados": 8000.0,
-    "Aluguel de Equipamentos (andaimes, betoneira, etc.)": 5000.0,
-    "Consumo de Energia": 1000.0,
-    "Consumo de Água": 500.0,
-    "Telefone e Internet": 300.0,
-    "Seguros e Licenças de Canteiro": 1200.0,
-    "Transporte de Materiais e Pessoas": 2500.0,
-    "Despesas de Escritório e Apoio": 800.0,
+    "Administração de Obra (Engenheiro/Arquiteto)": 15000.0, "Mestre de Obras e Encarregados": 8000.0,
+    "Aluguel de Equipamentos (andaimes, betoneira, etc.)": 5000.0, "Consumo de Energia": 1000.0,
+    "Consumo de Água": 500.0, "Telefone e Internet": 300.0, "Seguros e Licenças de Canteiro": 1200.0,
+    "Transporte de Materiais e Pessoas": 2500.0, "Despesas de Escritório e Apoio": 800.0,
 }
 
-def init_session_state_vars(info):
-    if 'pavimentos' not in st.session_state:
-        st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
-    if 'unidades' not in st.session_state:
-        st.session_state.unidades = [u.copy() for u in info.get('unidades', [])]
-    if 'deleting_pav_index' not in st.session_state:
-        st.session_state.deleting_pav_index = None
-    if 'custos_indiretos_obra' not in st.session_state:
-        st.session_state.custos_indiretos_obra = info.get('custos_indiretos_obra', {k: v for k, v in DEFAULT_CUSTOS_INDIRETOS_OBRA.items()})
-    if 'duracao_obra' not in st.session_state:
-        st.session_state.duracao_obra = info.get('duracao_obra', 12)
-    if 'etapas_percentuais' not in st.session_state:
-        etapas_salvas = info.get('etapas_percentuais', {})
-        if etapas_salvas and isinstance(list(etapas_salvas.values())[0], (int, float)):
-            st.session_state.etapas_percentuais = {etapa: {"percentual": val, "fonte": "Manual"} for etapa, val in etapas_salvas.items()}
-        else:
-            st.session_state.etapas_percentuais = {etapa: etapas_salvas.get(etapa, {"percentual": vals[1], "fonte": "Manual"}) for etapa, vals in ETAPAS_OBRA.items()}
-    if 'custos_indiretos_percentuais' not in st.session_state:
-        custos_salvos = info.get('custos_indiretos_percentuais', {})
-        if custos_salvos and isinstance(list(custos_salvos.values())[0], (int, float)):
-            st.session_state.custos_indiretos_percentuais = {item: {"percentual": val, "fonte": "Manual"} for item, val in custos_salvos.items()}
-        else:
-            st.session_state.custos_indiretos_percentuais = {item: custos_salvos.get(item, {"percentual": vals[1], "fonte": "Manual"}) for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()}
+# --- FUNÇÕES AUXILIARES ---
+def fmt_br(valor):
+    """
+    Formata um valor numérico para a moeda brasileira (R$) de forma independente do locale.
+    """
+    if pd.isna(valor) or valor is None: return "0,00"
+    s = f"{valor:,.2f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
-def calcular_areas_e_custos(pavimentos_list, custos_config):
-    pavimentos_df = pd.DataFrame(pavimentos_list)
-    if pavimentos_df.empty:
-        return 0, 0, 0, pd.DataFrame()
-
-    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
-    
-    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
-    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
-    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
-    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
-    
-    area_construida_total = pavimentos_df["area_constr"].sum()
-    area_equivalente_total = pavimentos_df["area_eq"].sum()
-    custo_direto_total = pavimentos_df["custo_direto"].sum()
-    
-    return area_construida_total, area_equivalente_total, custo_direto_total, pavimentos_df
+def render_metric_card(title, value, color="#31708f"):
+    return f"""<div style="background-color:{color}; border-radius:6px; padding:15px; text-align:center; height:100%;"><div style="color:#fff; font-size:16px; margin-bottom:4px;">{title}</div><div style="color:#fff; font-size:24px; font-weight:bold;">{value}</div></div>"""
 
 def init_storage(path):
     if not os.path.exists(path):
         with open(path, "w", encoding="utf-8") as f: json.dump([], f, ensure_ascii=False, indent=4)
+
 def load_json(path):
     init_storage(path);
     with open(path, "r", encoding="utf-8") as f: return json.load(f)
+
 def save_json(data, path):
     with open(path, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=4)
-def list_projects():
-    return load_json(JSON_PATH)
-def save_project(info):
-    projs = load_json(JSON_PATH)
-    if info.get("id"):
-        projs = [p if p["id"] != info["id"] else info for p in projs]
-    else:
-        pid = (max(p["id"] for p in projs) + 1) if projs else 1
-        info["id"] = pid; info["created_at"] = datetime.utcnow().isoformat(); projs.append(info)
-    save_json(projs, JSON_PATH)
-def load_project(pid):
-    project_data = next((p for p in load_json(JSON_PATH) if p["id"] == pid), None)
-    if project_data and 'etapas_percentuais' in project_data:
-        etapas = project_data['etapas_percentuais']
-        if etapas and isinstance(list(etapas.values())[0], (int, float)):
-            project_data['etapas_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in etapas.items()}
-    if project_data and 'custos_indiretos_percentuais' in project_data:
-        custos = project_data['custos_indiretos_percentuais']
-        if custos and isinstance(list(custos.values())[0], (int, float)):
-            project_data['custos_indiretos_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in custos.items()}
-    # Adiciona a inicialização de unidades
-    if 'unidades' not in project_data:
-        project_data['unidades'] = []
-    return project_data
-def delete_project(pid):
-    projs = [p for p in load_json(JSON_PATH) if p["id"] != pid]; save_json(projs, JSON_PATH)
+
 def save_to_historico(info, tipo_custo):
     path = HISTORICO_DIRETO_PATH if tipo_custo == 'direto' else HISTORICO_INDIRETO_PATH
     session_key = 'etapas_percentuais' if tipo_custo == 'direto' else 'custos_indiretos_percentuais'
@@ -162,9 +80,6 @@ def save_to_historico(info, tipo_custo):
     historico.append(nova_entrada)
     save_json(historico, path)
     st.toast(f"Custos {tipo_custo} de '{info['nome']}' arquivados no histórico!", icon="📚")
-
-def render_metric_card(title, value, color="#31708f"):
-    return f"""<div style="background-color:{color}; border-radius:6px; padding:15px; text-align:center; height:100%;"><div style="color:#fff; font-size:16px; margin-bottom:4px;">{title}</div><div style="color:#fff; font-size:24px; font-weight:bold;">{value}</div></div>"""
 
 def handle_percentage_redistribution(session_key, constants_dict):
     previous_key = f"previous_{session_key}"
@@ -213,7 +128,7 @@ def render_sidebar(form_key):
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
             if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
             if 'custos_indiretos_percentuais' in st.session_state: info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais
-            save_project(st.session_state.projeto_info); st.sidebar.success("Projeto salvo com sucesso!")
+            st.session_state.project_manager.save_project(st.session_state.projeto_info); st.sidebar.success("Projeto salvo com sucesso!")
         with st.sidebar.expander("📚 Arquivar no Histórico"):
             if st.button("Arquivar Custos Diretos", use_container_width=True):
                 info['etapas_percentuais'] = st.session_state.etapas_percentuais; save_to_historico(info, 'direto')
@@ -237,7 +152,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
         </td>
         """
     
-    # Gerar os dados para a seção de Composição do Custo Total
     composicao_custos = [
         ("Custo Direto", custo_direto_total, '#2ca02c'),
         ("Custo Indireto (Venda)", custo_indireto_calculado, '#1f77b4'),
@@ -257,14 +171,11 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
         </td>
         """
         
-    # Inicializa as variáveis para evitar NameError
     tabela_pavimentos_html = ""
     tabela_etapas_html = ""
     tabela_custos_indiretos_html = ""
     
-    # Criar tabela de detalhamento dos pavimentos
     if not pavimentos_df.empty:
-        # Calcular os somatórios
         total_area = pavimentos_df["area"].sum()
         total_area_eq = pavimentos_df["area_eq"].sum()
         total_area_constr = pavimentos_df["area_constr"].sum()
@@ -281,7 +192,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 <td style="text-align: right;">{fmt_br(row['area_constr'])} m²</td>
             </tr>
             """
-        # Adiciona a linha de total
         tabela_pavimentos_html += f"""
         <tr style="font-weight: bold; background-color: #f2f2f2;">
             <td colspan="4">Total</td>
@@ -291,7 +201,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
         </tr>
         """
     
-    # Criar tabela de custos por etapa da obra
     if info.get('etapas_percentuais'):
         total_custo_etapas = 0
         total_percentual_etapas = 0
@@ -307,7 +216,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
             """
             total_custo_etapas += custo
             total_percentual_etapas += percentual
-        # Adiciona a linha de total
         tabela_etapas_html += f"""
         <tr style="font-weight: bold; background-color: #f2f2f2;">
             <td>Total</td>
@@ -316,7 +224,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
         </tr>
         """
     
-    # Criar tabela de custos indiretos
     if custos_indiretos_percentuais:
         total_custo_indireto = 0
         total_percentual_indireto = 0
@@ -332,7 +239,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
             """
             total_custo_indireto += custo
             total_percentual_indireto += percentual
-        # Adiciona a linha de total
         tabela_custos_indiretos_html += f"""
         <tr style="font-weight: bold; background-color: #f2f2f2;">
             <td>Total</td>
@@ -349,88 +255,21 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
         <meta charset="UTF-8">
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
         <style>
-            @page {{
-                size: A4;
-                margin: 1.5cm;
-                @top-center {{
-                    content: "Relatório de Viabilidade - {info.get('nome', 'N/A')}";
-                    font-family: 'Roboto', sans-serif;
-                    font-size: 14px;
-                    color: #888;
-                }}
-                @bottom-right {{
-                    content: "Página " counter(page) " de " counter(pages);
-                    font-family: 'Roboto', sans-serif;
-                    font-size: 10px;
-                    color: #888;
-                }}
-            }}
-            body {{
-                font-family: 'Roboto', sans-serif;
-                color: #333;
-            }}
-            .cover-page {{
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                text-align: center;
-                page-break-after: always;
-            }}
-            .cover-page h1 {{
-                font-size: 36px;
-                color: #1a5276;
-                margin-bottom: 20px;
-            }}
-            .cover-page h2 {{
-                font-size: 28px;
-                color: #1f618d;
-                margin-bottom: 40px;
-            }}
-            .cover-page p {{
-                font-size: 16px;
-                color: #555;
-            }}
-            .page-break {{
-                page-break-before: always;
-            }}
-            h2.section-title {{
-                color: #1f618d;
-                border-bottom: 2px solid #aed6f1;
-                padding-bottom: 5px;
-                margin-top: 30px;
-                margin-bottom: 20px;
-            }}
-            table.card-container {{
-                width: 100%;
-                border-spacing: 10px;
-                margin-bottom: 20px;
-            }}
-            table.data-table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
-            }}
-            table.data-table th, table.data-table td {{
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }}
-            table.data-table th {{
-                background-color: #f2f2f2;
-                font-weight: bold;
-                font-size: 11px;
-            }}
-            table.data-table td {{
-                font-size: 10px;
-            }}
-            table.data-table tbody tr:nth-child(odd) {{
-                background-color: #f9f9f9;
-            }}
-            table.data-table tbody tr:hover {{
-                background-color: #f1f1f1;
-            }}
+            @page {{ size: A4; margin: 1.5cm; @top-center {{ content: "Relatório de Viabilidade - {info.get('nome', 'N/A')}"; font-family: 'Roboto', sans-serif; font-size: 14px; color: #888; }} @bottom-right {{ content: "Página " counter(page) " de " counter(pages); font-family: 'Roboto', sans-serif; font-size: 10px; color: #888; }} }}
+            body {{ font-family: 'Roboto', sans-serif; color: #333; }}
+            .cover-page {{ height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always; }}
+            .cover-page h1 {{ font-size: 36px; color: #1a5276; margin-bottom: 20px; }}
+            .cover-page h2 {{ font-size: 28px; color: #1f618d; margin-bottom: 40px; }}
+            .cover-page p {{ font-size: 16px; color: #555; }}
+            .page-break {{ page-break-before: always; }}
+            h2.section-title {{ color: #1f618d; border-bottom: 2px solid #aed6f1; padding-bottom: 5px; margin-top: 30px; margin-bottom: 20px; }}
+            table.card-container {{ width: 100%; border-spacing: 10px; margin-bottom: 20px; }}
+            table.data-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+            table.data-table th, table.data-table td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            table.data-table th {{ background-color: #f2f2f2; font-weight: bold; font-size: 11px; }}
+            table.data-table td {{ font-size: 10px; }}
+            table.data-table tbody tr:nth-child(odd) {{ background-color: #f9f9f9; }}
+            table.data-table tbody tr:hover {{ background-color: #f1f1f1; }}
         </style>
     </head>
     <body>
@@ -439,7 +278,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
             <h2>{info.get('nome', 'N/A')}</h2>
             <p>Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
         </div>
-        
         <h2 class="section-title">Resumo Financeiro e de Área</h2>
         <table class="card-container">
             <tr>
@@ -449,7 +287,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {create_html_card("Margem de Lucro", f"{lucratividade_percentual:.2f}%", "#a94442")}
             </tr>
         </table>
-        
         <h2 class="section-title">Dados de Área e Venda</h2>
         <table class="card-container">
             <tr>
@@ -459,7 +296,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {create_html_card("Relação AC/AP", f"{relacao_ac_priv:.2f}", "#d62728")}
             </tr>
         </table>
-
         <h2 class="section-title">Composição do Custo Total</h2>
         <table class="card-container">
             <tr>
@@ -469,7 +305,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {create_html_card(f"Custo do Terreno ({custo_terreno_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0:.2f}%)", f"R$ {fmt_br(custo_terreno_total)}", "#ff7f0e")}
             </tr>
         </table>
-
         <div class="page-break"></div>
         <h2 class="section-title">Detalhamento dos Pavimentos</h2>
         <table class="data-table">
@@ -488,7 +323,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {tabela_pavimentos_html}
             </tbody>
         </table>
-        
         <div class="page-break"></div>
         <h2 class="section-title">Custo Direto por Etapa da Obra</h2>
         <table class="data-table">
@@ -503,7 +337,6 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {tabela_etapas_html}
             </tbody>
         </table>
-
         <div class="page-break"></div>
         <h2 class="section-title">Detalhamento dos Custos Indiretos</h2>
         <table class="data-table">
@@ -518,8 +351,96 @@ def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_val
                 {tabela_custos_indiretos_html}
             </tbody>
         </table>
-
     </body>
     </html>
     """
     return HTML(string=html_string).write_pdf()
+
+class ProjectManager:
+    def __init__(self):
+        self._projects_data = self._load_projects()
+
+    def _load_projects(self):
+        """Carrega todos os projetos do arquivo JSON."""
+        if not os.path.exists(JSON_PATH):
+            with open(JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+        with open(JSON_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def list_projects(self):
+        """Retorna a lista de projetos."""
+        return self._projects_data
+
+    def save_project(self, info):
+        """Salva ou atualiza um projeto."""
+        if info.get("id"):
+            projs = [p if p["id"] != info["id"] else info for p in self._projects_data]
+        else:
+            pid = (max(p["id"] for p in self._projects_data) + 1) if self._projects_data else 1
+            info["id"] = pid
+            info["created_at"] = datetime.utcnow().isoformat()
+            projs = self._projects_data + [info]
+        self._projects_data = projs
+        save_json(self._projects_data, JSON_PATH)
+
+    def load_project(self, pid):
+        """Carrega os dados de um projeto específico."""
+        project_data = next((p for p in self._projects_data if p["id"] == pid), None)
+        if not project_data:
+            return None
+        # Normaliza a estrutura de dados para o novo formato de dicionário
+        if 'etapas_percentuais' in project_data and isinstance(list(project_data['etapas_percentuais'].values())[0], (int, float)):
+            project_data['etapas_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in project_data['etapas_percentuais'].items()}
+        if 'custos_indiretos_percentuais' in project_data and isinstance(list(project_data['custos_indiretos_percentuais'].values())[0], (int, float)):
+            project_data['custos_indiretos_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in project_data['custos_indiretos_percentuais'].items()}
+        if 'unidades' not in project_data:
+            project_data['unidades'] = []
+        return project_data
+
+    def delete_project(self, pid):
+        """Exclui um projeto."""
+        self._projects_data = [p for p in self._projects_data if p["id"] != pid]
+        save_json(self._projects_data, JSON_PATH)
+
+def init_session_state_vars(info):
+    if 'pavimentos' not in st.session_state:
+        st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
+    if 'unidades' not in st.session_state:
+        st.session_state.unidades = [u.copy() for u in info.get('unidades', [])]
+    if 'deleting_pav_index' not in st.session_state:
+        st.session_state.deleting_pav_index = None
+    if 'custos_indiretos_obra' not in st.session_state:
+        st.session_state.custos_indiretos_obra = info.get('custos_indiretos_obra', {k: v for k, v in DEFAULT_CUSTOS_INDIRETOS_OBRA.items()})
+    if 'duracao_obra' not in st.session_state:
+        st.session_state.duracao_obra = info.get('duracao_obra', 12)
+    if 'etapas_percentuais' not in st.session_state:
+        etapas_salvas = info.get('etapas_percentuais', {})
+        if etapas_salvas and isinstance(list(etapas_salvas.values())[0], (int, float)):
+            st.session_state.etapas_percentuais = {etapa: {"percentual": val, "fonte": "Manual"} for etapa, val in etapas_salvas.items()}
+        else:
+            st.session_state.etapas_percentuais = {etapa: etapas_salvas.get(etapa, {"percentual": vals[1], "fonte": "Manual"}) for etapa, vals in ETAPAS_OBRA.items()}
+    if 'custos_indiretos_percentuais' not in st.session_state:
+        custos_salvos = info.get('custos_indiretos_percentuais', {})
+        if custos_salvos and isinstance(list(custos_salvos.values())[0], (int, float)):
+            st.session_state.custos_indiretos_percentuais = {item: {"percentual": val, "fonte": "Manual"} for item, val in custos_salvos.items()}
+        else:
+            st.session_state.custos_indiretos_percentuais = {item: custos_salvos.get(item, {"percentual": vals[1], "fonte": "Manual"}) for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()}
+
+def calcular_areas_e_custos(pavimentos_list, custos_config):
+    pavimentos_df = pd.DataFrame(pavimentos_list)
+    if pavimentos_df.empty:
+        return 0, 0, 0, pd.DataFrame()
+
+    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
+    
+    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
+    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
+    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
+    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
+    
+    area_construida_total = pavimentos_df["area_constr"].sum()
+    area_equivalente_total = pavimentos_df["area_eq"].sum()
+    custo_direto_total = pavimentos_df["custo_direto"].sum()
+    
+    return area_construida_total, area_equivalente_total, custo_direto_total, pavimentos_df

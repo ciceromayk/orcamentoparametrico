@@ -45,8 +45,10 @@ if not pavimentos_df.empty:
     custo_direto_total = pavimentos_df["custo_direto"].sum()
     area_construida_total = pavimentos_df["area_constr"].sum()
 
+# Recalcula a área privativa total com base nos dados das unidades
+total_area_privativa = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
 preco_medio_venda_m2 = custos_config.get('preco_medio_venda_m2', 10000.0)
-vgv_total = info.get('area_privativa', 0) * preco_medio_venda_m2
+vgv_total = total_area_privativa * preco_medio_venda_m2
 
 custos_indiretos_percentuais = info.get('custos_indiretos_percentuais', {})
 custo_indireto_calculado = 0
@@ -73,16 +75,14 @@ lucratividade_percentual = (lucratividade_valor / vgv_total) * 100 if vgv_total 
 # Adicionando a nova seção de Resumo do Empreendimento
 with st.container(border=True):
     st.subheader("Resumo do Empreendimento")
-    # Tenta obter a área privativa total das unidades, se houver
-    total_area_privativa_unidades = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
     # Calcula o Índice AC/AP
-    relacao_ac_ap = area_construida_total / total_area_privativa_unidades if total_area_privativa_unidades > 0 else 0
+    relacao_ac_ap = area_construida_total / total_area_privativa if total_area_privativa > 0 else 0
     num_unidades = info.get('num_unidades', 0)
     
     resumo_cols = st.columns(4)
     cores_resumo = ["#3c763d", "#a94442", "#5c5c5c", "#1f77b4"]
     resumo_cols[0].markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores_resumo[0]), unsafe_allow_html=True)
-    resumo_cols[1].markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores_resumo[1]), unsafe_allow_html=True)
+    resumo_cols[1].markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa)} m²", cores_resumo[1]), unsafe_allow_html=True)
     resumo_cols[2].markdown(render_metric_card("Índice AC / AP", f"{relacao_ac_ap:.2f}", cores_resumo[2]), unsafe_allow_html=True)
     resumo_cols[3].markdown(render_metric_card("Nº de Unidades", f"{num_unidades}", cores_resumo[3]), unsafe_allow_html=True)
     
@@ -132,7 +132,7 @@ def generate_ai_analysis():
         "custo_indireto_venda": custo_indireto_calculado,
         "custo_indireto_obra": custo_indireto_obra_total,
         "custo_terreno": custo_terreno_total,
-        "area_privativa": total_area_privativa_unidades,
+        "area_privativa": total_area_privativa,
         "area_terreno": info.get('area_terreno', 0),
         "area_construida": area_construida_total,
         "composicao_custos": {

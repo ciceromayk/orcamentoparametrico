@@ -1,188 +1,269 @@
+# utils.py
 import streamlit as st
 import pandas as pd
-from utils import (
-    fmt_br, render_metric_card, render_sidebar, save_project,
-    DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
-    init_session_state_vars, calcular_areas_e_custos
-)
+import json
+import os
+from datetime import datetime
+from weasyprint import HTML
+import base64
+from io import BytesIO
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Dados do Projeto", layout="wide")
+# --- CONSTANTES GLOBAIS ---
+JSON_PATH = "projects.json"
+HISTORICO_DIRETO_PATH = "historico_direto.json"
+HISTORICO_INDIRETO_PATH = "historico_indireto.json"
 
-# CSS para diminuir as fontes da tabela e adicionar barra de rolagem
-st.markdown("""
-<style>
-    /* Diminui a fonte dos cabeçalhos das colunas */
-    [data-testid="column"] .st-markdown > p {
-        font-size: 14px;
-        text-align: center;
-    }
-    /* Diminui a fonte dos inputs e selectboxes */
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div > div {
-        font-size: 14px;
-    }
-    /* Diminui a fonte do checkbox */
-    .stCheckbox > label {
-        font-size: 14px;
-    }
-    /* Adiciona barra de rolagem vertical para a seção de pavimentos */
-    .pavimentos-scrollable-container {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-</style>
-""", unsafe_allow_html=True)
+TIPOS_PAVIMENTO = {
+    "Área Privativa (Autônoma)": (1.00, 1.00), "Áreas de lazer ambientadas": (2.00, 4.00), "Varandas": (0.75, 1.00),
+    "Terraços / Áreas Descobertas": (0.30, 0.60), "Garagem (Subsolo)": (0.50, 0.75), "Estacionamento (terreno)": (0.05, 0.10),
+    "Salas com Acabamento": (1.00, 1.00), "Salas sem Acabamento": (0.75, 0.90), "Loja sem Acabamento": (0.40, 0.60),
+    "Serviço (unifam. baixa, aberta)": (0.50, 0.50), "Barrilete / Cx D'água / Casa Máquinas": (0.50, 0.75),
+    "Piscinas": (0.50, 0.75), "Quintais / Calçadas / Jardins": (0.10, 0.30), "Projeção Terreno sem Benfeitoria": (0.00, 0.00),
+}
+DEFAULT_PAVIMENTO = {"nome": "Pavimento Tipo", "tipo": "Área Privativa (Autônoma)", "rep": 1, "coef": 1.00, "area": 100.0, "constr": True}
 
-if "projeto_info" not in st.session_state:
-    st.error("Nenhum projeto carregado. Por favor, selecione um projeto na página inicial.")
-    if st.button("Voltar para a seleção de projetos"):
-        st.switch_page("Início.py")
-    st.stop()
+ETAPAS_OBRA = {
+    "Serviços Preliminares e Fundações": (7.0, 8.0, 9.0), "Estrutura (Supraestrutura)": (14.0, 16.0, 22.0),
+    "Vedações (Alvenaria)": (8.0, 10.0, 15.0), "Cobertura e Impermeabilização": (4.0, 5.0, 8.0),
+    "Revestimentos de Fachada": (5.0, 6.0, 10.0), "Instalações (Elétrica e Hidráulica)": (12.0, 15.0, 18.0),
+    "Esquadrias (Portas e Janelas)": (6.0, 8.0, 12.0), "Revestimentos de Piso": (8.0, 10.0, 15.0),
+    "Revestimentos de Parede": (6.0, 8.0, 12.0), "Revestimentos de Forro": (3.0, 4.0, 6.0),
+    "Pintura": (4.0, 5.0, 8.0), "Serviços Complementares e Externos": (3.0, 5.0, 10.0)
+}
+
+DEFAULT_CUSTOS_INDIRETOS = {
+    "IRPJ/ CS/ PIS/ COFINS": (3.0, 4.0, 6.0), "Corretagem": (3.0, 3.61, 5.0),
+    "Publicidade": (0.5, 0.9, 2.0), "Manutenção": (0.3, 0.5, 1.0), "Custo Fixo da Incorporadora": (3.0, 4.0, 6.0),
+    "Assessoria Técnica": (0.5, 0.7, 1.5), "Projetos": (0.4, 0.52, 1.5),
+    "Licenças e Incorporação": (0.1, 0.2, 0.5), "Outorga Onerosa": (0.0, 0.0, 10.0), "Condomínio": (0.0, 0.0, 0.5),
+    "IPTU": (0.05, 0.07, 0.2), "Preparação do Terreno": (0.2, 0.33, 1.0), "Financiamento Bancário": (1.0, 1.9, 3.0),
+}
+DEFAULT_CUSTOS_INDIRETOS_FIXOS = {}
+DEFAULT_CUSTOS_INDIRETOS_OBRA = {
+    "Administração de Obra (Engenheiro/Arquiteto)": 15000.0, "Mestre de Obras e Encarregados": 8000.0,
+    "Aluguel de Equipamentos (andaimes, betoneira, etc.)": 5000.0, "Consumo de Energia": 1000.0,
+    "Consumo de Água": 500.0, "Telefone e Internet": 300.0, "Seguros e Licenças de Canteiro": 1200.0,
+    "Transporte de Materiais e Pessoas": 2500.0, "Despesas de Escritório e Apoio": 800.0,
+}
+
+# --- DADOS MOCADOS CUB E SINAPI (para demonstração) ---
+# Fonte: Dados fictícios com base em valores de mercado aproximados
+CUB_DATA = {
+    "AC": {"R-16": 2800, "P-8": 2600, "COMERCIAL": 3100},
+    "SP": {"R-16": 4500, "P-8": 4200, "COMERCIAL": 5100},
+    "RJ": {"R-16": 4700, "P-8": 4400, "COMERCIAL": 5300},
+    "MG": {"R-16": 3900, "P-8": 3700, "COMERCIAL": 4300},
+    "RS": {"R-16": 3800, "P-8": 3600, "COMERCIAL": 4200},
+}
+# --- FIM DADOS MOCADOS ---
+
+
+# --- FUNÇÕES AUXILIARES ---
+def fmt_br(valor):
+    """
+    Formata um valor numérico para a moeda brasileira (R$) de forma independente do locale.
+    """
+    if pd.isna(valor) or valor is None: return "0,00"
+    s = f"{valor:,.2f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+def render_metric_card(title, value, color="#31708f"):
+    return f"""<div style="background-color:{color}; border-radius:6px; padding:15px; text-align:center; height:100%;"><div style="color:#fff; font-size:16px; margin-bottom:4px;">{title}</div><div style="color:#fff; font-size:24px; font-weight:bold;">{value}</div></div>"""
+
+def init_storage(path):
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f: json.dump([], f, ensure_ascii=False, indent=4)
+
+def load_json(path):
+    init_storage(path);
+    with open(path, "r", encoding="utf-8") as f: return json.load(f)
+
+def save_json(data, path):
+    with open(path, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=4)
+
+def save_to_historico(info, tipo_custo):
+    path = HISTORICO_DIRETO_PATH if tipo_custo == 'direto' else HISTORICO_INDIRETO_PATH
+    session_key = 'etapas_percentuais' if tipo_custo == 'direto' else 'custos_indiretos_percentuais'
+    historico = load_json(path)
+    percentuais = {k: v['percentual'] for k, v in info[session_key].items()}
+    nova_entrada = { "id": (max(p["id"] for p in historico) + 1) if historico else 1, "nome": info["nome"],
+        "data": datetime.now().strftime("%Y-%m-%d"), "percentuais": percentuais }
+    historico.append(nova_entrada)
+    save_json(historico, path)
+    st.toast(f"Custos {tipo_custo} de '{info['nome']}' arquivados no histórico!", icon="📚")
+
+def handle_percentage_redistribution(session_key, constants_dict):
+    previous_key = f"previous_{session_key}"
+    if previous_key not in st.session_state: st.session_state[previous_key] = {k: v.copy() for k, v in st.session_state[session_key].items()}
+    current, previous = st.session_state[session_key], st.session_state[previous_key]
+    if current == previous: return
+    changed_item_key = next((k for k, v in current.items() if v['percentual'] != previous.get(k, {}).get('percentual')), None)
+    if not changed_item_key: return
+    st.session_state.redistribution_occured = True
+    delta = current[changed_item_key]['percentual'] - previous[changed_item_key]['percentual']
+    total_others = sum(v['percentual'] for k, v in previous.items() if k != changed_item_key)
+    if total_others > 0:
+        for item, values in current.items():
+            if item != changed_item_key:
+                min_val, _, max_val = constants_dict[item]
+                proportion = previous[item]['percentual'] / total_others
+                new_percent = values['percentual'] - (delta * proportion)
+                current[item]['percentual'] = max(min_val, min(new_percent, max_val))
+    st.session_state[previous_key] = {k: v.copy() for k, v in current.items()}; st.rerun()
+
+def render_sidebar(form_key):
+    st.sidebar.title("Estudo de Viabilidade")
+    st.sidebar.divider()
     
-# Dialog de confirmação de exclusão
-@st.dialog("Confirmar Exclusão")
-def confirm_delete_dialog():
-    index_to_delete = st.session_state.deleting_pav_index
-    if index_to_delete is not None:
-        pav_name = st.session_state.pavimentos[index_to_delete]['nome']
-        st.write(f"Tem certeza que deseja excluir o pavimento **{pav_name}**?")
+    # Seção para carregar/editar projetos
+    if "projeto_info" in st.session_state:
+        info = st.session_state.projeto_info
+        st.sidebar.subheader(f"Projeto: {info['nome']}")
+        with st.sidebar.expander("📝 Dados Gerais do Projeto"):
+            with st.form(key=f"edit_form_sidebar_{form_key}"):
+                info['nome'] = st.text_input("Nome", value=info['nome'])
+                info['area_terreno'] = st.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
+                info['area_privativa'] = st.number_input("Área Privativa (m²)", value=info['area_privativa'], format="%.2f")
+                info['num_unidades'] = st.number_input("Unidades", value=info['num_unidades'], step=1)
+                st.form_submit_button("Atualizar")
+        with st.sidebar.expander("📈 Configurações de Mercado"):
+                custos_config = info.get('custos_config', {})
+                custos_config['preco_medio_venda_m2'] = st.number_input("Preço Médio Venda (R$/m² privativo)", min_value=0.0, value=custos_config.get('preco_medio_venda_m2', 10000.0), format="%.2f")
+                info['custos_config'] = custos_config
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Sim, Excluir", use_container_width=True, type="primary"):
-                del st.session_state.pavimentos[index_to_delete]
-                st.session_state.deleting_pav_index = None
-                st.success(f"Pavimento '{pav_name}' excluído com sucesso!")
-                st.rerun()
-        with col2:
-            if st.button("Cancelar", use_container_width=True):
-                st.session_state.deleting_pav_index = None
-                st.rerun()
+        # --- NOVO PAINEL CUB/SINAPI ---
+        with st.sidebar.expander("📊 Custo de Construção (CUB/SINAPI)"):
+            st.markdown("<p style='font-size: 14px; text-align: left;'>Selecione uma referência para o custo de construção.</p>", unsafe_allow_html=True)
+            
+            estado = st.selectbox("Estado:", list(CUB_DATA.keys()), key=f"cub_estado_{form_key}")
+            padrao = st.selectbox("Padrão:", list(CUB_DATA.get(estado, {}).keys()), key=f"cub_padrao_{form_key}")
 
-# Inicializa as variáveis de estado
-init_session_state_vars(st.session_state.projeto_info)
+            if estado and padrao:
+                cub_value = CUB_DATA[estado][padrao]
+                st.info(f"O valor de referência para {estado} ({padrao}) é de R$ {fmt_br(cub_value)}/m².")
+                
+                # Botão para aplicar o valor
+                if st.button(f"Usar R$ {fmt_br(cub_value)}/m²", use_container_width=True, key=f"apply_cub_{form_key}"):
+                    info['custos_config']['custo_area_privativa'] = float(cub_value)
+                    st.success("Custo de construção atualizado!")
+                    st.experimental_rerun()
+        # --- FIM NOVO PAINEL ---
 
-# Passamos uma chave única para a sidebar para evitar erros de chave duplicada
-render_sidebar(form_key="sidebar_dados_projeto")
+        with st.sidebar.expander("💰 Configuração de Custos"):
+            custos_config = info.get('custos_config', {})
+            custos_config['custo_terreno_m2'] = st.number_input("Custo do Terreno por m² (R$)", min_value=0.0, value=custos_config.get('custo_terreno_m2', 2500.0), format="%.2f")
+            
+            # Campo de custo de construção agora se alinha com o CUB
+            custos_config['custo_area_privativa'] = st.number_input(
+                "Custo de Construção (R$/m² privativo)", 
+                min_value=0.0, 
+                value=custos_config.get('custo_area_privativa', 4500.0), 
+                step=100.0, 
+                format="%.2f"
+            )
+            info['custos_config'] = custos_config
+        st.sidebar.divider()
+        if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
+            if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
+            if 'custos_indiretos_percentuais' in st.session_state: info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais
+            st.session_state.project_manager.save_project(st.session_state.projeto_info); st.sidebar.success("Projeto salvo com sucesso!")
+        with st.sidebar.expander("📚 Arquivar no Histórico"):
+            if st.button("Arquivar Custos Diretos", use_container_width=True):
+                info['etapas_percentuais'] = st.session_state.etapas_percentuais; save_to_historico(info, 'direto')
+            if st.button("Arquivar Custos Indiretos", use_container_width=True):
+                info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais; save_to_historico(info, 'indireto')
+        if st.sidebar.button("Mudar de Projeto", use_container_width=True):
+            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais"]
+            for key in keys_to_delete:
+                if key in st.session_state: del st.session_state[key]
+            st.switch_page("Início.py")
 
-info = st.session_state.projeto_info
-st.title("📝 Dados do Projeto")
-st.subheader("Configuração e Detalhamento do Empreendimento")
+class ProjectManager:
+    def __init__(self):
+        self._projects_data = self._load_projects()
 
-# --- Exibição e Edição dos dados gerais ---
-with st.expander("📝 Dados Gerais do Projeto", expanded=True):
-    # Chamando a função centralizada de cálculo
-    area_construida_total, area_equivalente_total, _, _ = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
+    def _load_projects(self):
+        """Carrega todos os projetos do arquivo JSON."""
+        if not os.path.exists(JSON_PATH):
+            with open(JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+        with open(JSON_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def list_projects(self):
+        """Retorna a lista de projetos."""
+        return self._projects_data
+
+    def save_project(self, info):
+        """Salva ou atualiza um projeto."""
+        if info.get("id"):
+            projs = [p if p["id"] != info["id"] else info for p in self._projects_data]
+        else:
+            pid = (max(p["id"] for p in self._projects_data) + 1) if self._projects_data else 1
+            info["id"] = pid
+            info["created_at"] = datetime.utcnow().isoformat()
+            projs = self._projects_data + [info]
+        self._projects_data = projs
+        save_json(self._projects_data, JSON_PATH)
+
+    def load_project(self, pid):
+        """Carrega os dados de um projeto específico."""
+        project_data = next((p for p in self._projects_data if p["id"] == pid), None)
+        if not project_data:
+            return None
+        # Normaliza a estrutura de dados para o novo formato de dicionário
+        if 'etapas_percentuais' in project_data and isinstance(list(project_data['etapas_percentuais'].values())[0], (int, float)):
+            project_data['etapas_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in project_data['etapas_percentuais'].items()}
+        if 'custos_indiretos_percentuais' in project_data and isinstance(list(project_data['custos_indiretos_percentuais'].values())[0], (int, float)):
+            project_data['custos_indiretos_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in project_data['custos_indiretos_percentuais'].items()}
+        if 'unidades' not in project_data:
+            project_data['unidades'] = []
+        return project_data
+
+    def delete_project(self, pid):
+        """Exclui um projeto."""
+        self._projects_data = [p for p in self._projects_data if p["id"] != pid]
+        save_json(self._projects_data, JSON_PATH)
+
+def init_session_state_vars(info):
+    if 'pavimentos' not in st.session_state:
+        st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
+    if 'unidades' not in st.session_state:
+        st.session_state.unidades = [u.copy() for u in info.get('unidades', [])]
+    if 'deleting_pav_index' not in st.session_state:
+        st.session_state.deleting_pav_index = None
+    if 'custos_indiretos_obra' not in st.session_state:
+        st.session_state.custos_indiretos_obra = info.get('custos_indiretos_obra', {k: v for k, v in DEFAULT_CUSTOS_INDIRETOS_OBRA.items()})
+    if 'duracao_obra' not in st.session_state:
+        st.session_state.duracao_obra = info.get('duracao_obra', 12)
+    if 'etapas_percentuais' not in st.session_state:
+        etapas_salvas = info.get('etapas_percentuais', {})
+        if etapas_salvas and isinstance(list(etapas_salvas.values())[0], (int, float)):
+            st.session_state.etapas_percentuais = {etapa: {"percentual": val, "fonte": "Manual"} for etapa, val in etapas_salvas.items()}
+        else:
+            st.session_state.etapas_percentuais = {etapa: etapas_salvas.get(etapa, {"percentual": vals[1], "fonte": "Manual"}) for etapa, vals in ETAPAS_OBRA.items()}
+    if 'custos_indiretos_percentuais' not in st.session_state:
+        custos_salvos = info.get('custos_indiretos_percentuais', {})
+        if custos_salvos and isinstance(list(custos_salvos.values())[0], (int, float)):
+            st.session_state.custos_indiretos_percentuais = {item: {"percentual": val, "fonte": "Manual"} for item, val in custos_salvos.items()}
+        else:
+            st.session_state.custos_indiretos_percentuais = {item: custos_salvos.get(item, {"percentual": vals[1], "fonte": "Manual"}) for item, vals in DEFAULT_CUSTOS_INDIRETOS.items()}
+
+def calcular_areas_e_custos(pavimentos_list, custos_config):
+    pavimentos_df = pd.DataFrame(pavimentos_list)
+    if pavimentos_df.empty:
+        return 0, 0, 0, pd.DataFrame()
+
+    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
     
-    c1, c2, c3, c4, c5 = st.columns(5)
-    cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442", "#5c5c5c"]
-    c1.markdown(render_metric_card("Nome", info["nome"], cores[0]), unsafe_allow_html=True)
-    c2.markdown(render_metric_card("Área Terreno", f"{fmt_br(info['area_terreno'])} m²", cores[1]), unsafe_allow_html=True)
-    c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(info['area_privativa'])} m²", cores[2]), unsafe_allow_html=True)
-    c4.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[3]), unsafe_allow_html=True)
-    c5.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[4]), unsafe_allow_html=True)
-
-# --- Detalhamento dos Pavimentos ---
-with st.expander("🏢 Dados dos Pavimentos", expanded=True):
-    b1, _ = st.columns([0.2, 0.8])
-    if b1.button("➕ Adicionar Pavimento"):
-        st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
-        st.rerun()
-
-    # Larguras das colunas ajustadas
-    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.8]
-    headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
-    header_cols = st.columns(col_widths)
-    for hc, title in zip(header_cols, headers):
-        hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
-
-    with st.container():
-        st.markdown('<div class="pavimentos-scrollable-container">', unsafe_allow_html=True)
-        for i, pav in enumerate(st.session_state.pavimentos):
-            cols = st.columns(col_widths)
-            pav['nome'] = cols[0].text_input("nome", pav['nome'], key=f"nome_{i}", label_visibility="collapsed")
-            pav['tipo'] = cols[1].selectbox("tipo", list(TIPOS_PAVIMENTO.keys()), list(TIPOS_PAVIMENTO.keys()).index(pav.get('tipo', next(iter(TIPOS_PAVIMENTO)))), key=f"tipo_{i}", label_visibility="collapsed")
-            pav['rep'] = cols[2].number_input("rep", min_value=1, value=pav['rep'], step=1, key=f"rep_{i}", label_visibility="collapsed")
-            
-            min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
-            help_text = f"Intervalo: {min_c:.2f} - {max_c:.2f}"
-            
-            if float(pav.get('coef', min_c)) > max_c:
-                pav['coef'] = max_c
-            elif float(pav.get('coef', min_c)) < min_c:
-                pav['coef'] = min_c
-
-            if min_c == max_c:
-                cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{pav['coef']:.2f}</div>", unsafe_allow_html=True)
-            else:
-                pav['coef'] = cols[3].number_input("coef", min_value=min_c, max_value=max_c, value=float(pav.get('coef', min_c)), step=0.01, format="%.2f", key=f"coef_{i}", label_visibility="collapsed", help=help_text)
-
-            pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
-            
-            pav['constr'] = cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
-            
-            total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
-            cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
-            cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(total_i)}</div>", unsafe_allow_html=True)
-
-            if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
-                st.session_state.deleting_pav_index = i
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
-    if st.session_state.deleting_pav_index is not None:
-        confirm_delete_dialog()
-
-# --- Nova Tabela de Dados de Unidades ---
-with st.expander("📝 Dados de Unidades", expanded=True):
-    b1_un, _ = st.columns([0.2, 0.8])
-    if b1_un.button("➕ Adicionar Unidade"):
-        # Adiciona uma nova unidade ao estado da sessão
-        st.session_state.unidades.append({"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0})
-        st.rerun()
-
-    # Definir as colunas da tabela
-    col_widths = [3, 1.5, 2, 2.5, 0.8]
-    headers = ["Tipo de Unidade", "Quantidade", "Área Privativa (m²)", "Área Privativa Total (m²)", "Ação"]
-    header_cols = st.columns(col_widths)
-    for hc, title in zip(header_cols, headers):
-        hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
-
-    # Exibir a tabela com campos editáveis
-    total_quantidade = 0
-    total_area_privativa_total = 0
-    if st.session_state.unidades:
-        for i, unidade in enumerate(st.session_state.unidades):
-            cols = st.columns(col_widths)
-            
-            unidade['nome'] = cols[0].text_input("nome", unidade['nome'], key=f"unid_nome_{i}", label_visibility="collapsed")
-            unidade['quantidade'] = cols[1].number_input("quantidade", min_value=1, value=unidade['quantidade'], step=1, key=f"unid_qtd_{i}", label_visibility="collapsed")
-            unidade['area_privativa'] = cols[2].number_input("area_priv", min_value=0.0, value=unidade['area_privativa'], step=1.0, format="%.2f", key=f"unid_area_{i}", label_visibility="collapsed")
-            
-            unidade['area_privativa_total'] = unidade['quantidade'] * unidade['area_privativa']
-            cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
-
-            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=True):
-                del st.session_state.unidades[i]
-                st.rerun()
-
-            total_quantidade += unidade['quantidade']
-            total_area_privativa_total += unidade['area_privativa_total']
-
-    # Linha de totais
-    if st.session_state.unidades:
-        st.markdown("---")
-        total_cols = st.columns(col_widths)
-        total_cols[0].markdown(f"<div style='font-weight: bold; padding-top: 8px;'>Total</div>", unsafe_allow_html=True)
-        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
-        total_cols[2].empty()
-        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
-
-
-info['pavimentos'] = st.session_state.pavimentos
-info['unidades'] = st.session_state.unidades
-
-if st.button("Salvar Dados do Projeto", type="primary"):
-    st.session_state.project_manager.save_project(info)
-    st.success("Dados do projeto salvos com sucesso!")
+    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
+    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
+    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
+    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
+    
+    area_construida_total = pavimentos_df["area_constr"].sum()
+    area_equivalente_total = pavimentos_df["area_eq"].sum()
+    custo_direto_total = pavimentos_df["custo_direto"].sum()
+    
+    return area_construida_total, area_equivalente_total, custo_direto_total, pavimentos_df

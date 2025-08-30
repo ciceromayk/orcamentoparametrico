@@ -90,83 +90,67 @@ for item, values in st.session_state.custos_indiretos_percentuais.items():
     custo_calculado_item = vgv_total * (float(percentual) / 100)
     custo_indireto_calculado += custo_calculado_item
 
-# Layout de duas colunas com contêineres e estilos
-col1, col2 = st.columns([2, 1])
+# Bloco com os cards de métricas
+with st.container(border=True):
+    card_cols = st.columns(3)
+    card_cols[0].markdown(render_metric_card("VGV Total", f"R$ {fmt_br(vgv_total)}", "#007bff"), unsafe_allow_html=True)
+    card_cols[1].markdown(render_metric_card("Custo Indireto Total", f"R$ {fmt_br(custo_indireto_calculado)}", "#28a745"), unsafe_allow_html=True)
+    card_cols[2].markdown(render_metric_card("% do Custo Indireto", f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%", "#ff7f00"), unsafe_allow_html=True)
 
-# Bloco com os cards na coluna 2 (movido para cima)
-with col2:
-    st.write("### Resumo Financeiro")
-    with st.container(border=True):
-        st.markdown(render_metric_card(
-            "VGV Total",
-            f"R$ {fmt_br(vgv_total)}",
-            "#007bff"
-        ), unsafe_allow_html=True)
-        st.markdown(render_metric_card(
-            "Custo Indireto Total",
-            f"R$ {fmt_br(custo_indireto_calculado)}",
-            "#28a745"
-        ), unsafe_allow_html=True)
-        st.markdown(render_metric_card(
-            "% do Custo Indireto",
-            f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%",
-            "#ff7f00"
-        ), unsafe_allow_html=True)
 
-# Bloco principal com a tabela manual na coluna 1 (movido para baixo)
-with col1:
-    with st.container(border=True):
-        st.write("### Ajuste os Percentuais")
+# Bloco da tabela manual
+with st.expander("Detalhamento de Custos Indiretos", expanded=True):
+    st.write("### Ajuste os Percentuais")
+
+    # Definindo as colunas da tabela manual
+    col_widths = [4, 2, 2]
+    headers = ["Item", "Percentual (%)", "Custo (R$)"]
+    header_cols = st.columns(col_widths)
+    for hc, title in zip(header_cols, headers):
+        hc.markdown(f'<p style="text-align:center; font-size:16px;"><b>{title}</b></p>', unsafe_allow_html=True)
+    
+    for item, (min_val, default_val, max_val) in DEFAULT_CUSTOS_INDIRETOS.items():
+        cols = st.columns(col_widths)
         
-        # Definindo as colunas da tabela manual
-        col_widths = [4, 2, 2]
-        headers = ["Item", "Percentual (%)", "Custo (R$)"]
-        header_cols = st.columns(col_widths)
-        for hc, title in zip(header_cols, headers):
-            hc.markdown(f'<p style="text-align:center; font-size:16px;"><b>{title}</b></p>', unsafe_allow_html=True)
+        # Coluna Item (não editável)
+        cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
         
-        for item, (min_val, default_val, max_val) in DEFAULT_CUSTOS_INDIRETOS.items():
-            cols = st.columns(col_widths)
+        # Coluna Custo Mensal (editável)
+        current_percent = st.session_state.custos_indiretos_percentuais.get(item, {}).get('percentual', default_val)
+        
+        novo_percentual_str = cols[1].text_input(
+            "Percentual (%)",
+            value=f"{current_percent:.2f}".replace('.',','),
+            key=f"custo_percentual_{item}",
+            label_visibility="collapsed"
+        )
+        
+        novo_percentual_float = current_percent
+        # Adicionando try-except para validação mais robusta
+        try:
+            # Substitui a vírgula por ponto para a conversão e remove espaços
+            temp_value = novo_percentual_str.strip().replace(',', '.')
+            if temp_value:
+                novo_percentual_float = float(temp_value)
+            else:
+                novo_percentual_float = 0.0 # Define 0 se o campo estiver vazio
+        except ValueError:
+            st.error(f"Valor inválido para '{item}'. Por favor, insira um número.")
+            novo_percentual_float = current_percent # Mantém o valor original
             
-            # Coluna Item (não editável)
-            cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
+        # Valida se o novo percentual está dentro do intervalo
+        if not (min_val <= novo_percentual_float <= max_val):
+            st.warning(f"O percentual para '{item}' deve estar entre {min_val:.2f}% e {max_val:.2f}%.")
+            # Força o valor a ficar dentro do intervalo se for editado
+            novo_percentual_float = max(min_val, min(novo_percentual_float, max_val))
             
-            # Coluna Custo Mensal (editável)
-            current_percent = st.session_state.custos_indiretos_percentuais.get(item, {}).get('percentual', default_val)
-            
-            novo_percentual_str = cols[1].text_input(
-                "Percentual (%)",
-                value=f"{current_percent:.2f}".replace('.',','),
-                key=f"custo_percentual_{item}",
-                label_visibility="collapsed"
-            )
-            
-            novo_percentual_float = current_percent
-            # Adicionando try-except para validação mais robusta
-            try:
-                # Substitui a vírgula por ponto para a conversão e remove espaços
-                temp_value = novo_percentual_str.strip().replace(',', '.')
-                if temp_value:
-                    novo_percentual_float = float(temp_value)
-                else:
-                    novo_percentual_float = 0.0 # Define 0 se o campo estiver vazio
-            except ValueError:
-                st.error(f"Valor inválido para '{item}'. Por favor, insira um número.")
-                novo_percentual_float = current_percent # Mantém o valor original
-                
-            # Valida se o novo percentual está dentro do intervalo
-            if not (min_val <= novo_percentual_float <= max_val):
-                st.warning(f"O percentual para '{item}' deve estar entre {min_val:.2f}% e {max_val:.2f}%.")
-                # Força o valor a ficar dentro do intervalo se for editado
-                novo_percentual_float = max(min_val, min(novo_percentual_float, max_val))
-                
-            # Coluna Custo Total (calculado)
-            custo_calculado_item = vgv_total * (novo_percentual_float / 100)
-            cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_calculado_item)}</div>", unsafe_allow_html=True)
-            
-            if novo_percentual_float != current_percent:
-                st.session_state.custos_indiretos_percentuais[item]['percentual'] = novo_percentual_float
-                st.rerun()
+        # Coluna Custo Total (calculado)
+        custo_calculado_item = vgv_total * (novo_percentual_float / 100)
+        cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_calculado_item)}</div>", unsafe_allow_html=True)
+        
+        if novo_percentual_float != current_percent:
+            st.session_state.custos_indiretos_percentuais[item]['percentual'] = novo_percentual_float
+            st.rerun()
 
 # Atualiza o estado da sessão
 info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais

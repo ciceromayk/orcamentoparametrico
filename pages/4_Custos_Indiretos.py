@@ -4,7 +4,7 @@ import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar, DEFAULT_CUSTOS_INDIRETOS_OBRA,
     DEFAULT_CUSTOS_INDIRETOS,
-    load_json, save_to_historico, init_session_state_vars
+    init_session_state_vars
 )
 
 st.set_page_config(page_title="Custos Indiretos", layout="wide", page_icon="💸")

@@ -3,7 +3,8 @@ import pandas as pd
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
     DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
-    init_session_state_vars, calcular_areas_e_custos
+    init_session_state_vars, calcular_areas_e_custos,
+    CUB_DATA
 )
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
@@ -84,13 +85,46 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     # Calcular a área privativa total a partir das unidades
     total_area_privativa_unidades = sum(unidade['area_privativa_total'] for unidade in st.session_state.unidades)
     
-    c1, c2, c3, c4, c5 = st.columns(5)
-    cores = ["#31708f", "#3c763d", "#8a6d3b", "#a94442", "#5c5c5c"]
-    c1.markdown(render_metric_card("Nome", info["nome"], cores[0]), unsafe_allow_html=True)
-    c2.markdown(render_metric_card("Área Terreno", f"{fmt_br(info['area_terreno'])} m²", cores[1]), unsafe_allow_html=True)
-    c3.markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores[2]), unsafe_allow_html=True)
-    c4.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[3]), unsafe_allow_html=True)
-    c5.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[4]), unsafe_allow_html=True)
+    # Use um formulário para atualizar os dados do projeto
+    with st.form(key="dados_gerais_form"):
+        col1, col2, col3 = st.columns(3)
+        info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
+        info['area_terreno'] = col2.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
+        info['num_unidades'] = col3.number_input("Nº de Unidades", value=info['num_unidades'], step=1)
+        
+        st.write("---")
+        
+        col4, col5 = st.columns(2)
+        
+        # Seleção de CUB/SINAPI
+        estados = list(CUB_DATA.keys())
+        padroes = ["Padrão Normal", "Padrão Alto", "Padrão Baixo"]
+        
+        estado_selecionado = col4.selectbox("Estado (CUB/SINAPI)", options=["Selecione"] + estados)
+        padrao_selecionado = col5.selectbox("Padrão", options=["Selecione"] + padroes)
+        
+        if estado_selecionado != "Selecione" and padrao_selecionado != "Selecione":
+            cub_value = CUB_DATA[estado_selecionado][padrao_selecionado]
+            st.info(f"O CUB de {estado_selecionado} ({padrao_selecionado}) é de R$ {fmt_br(cub_value)}/m².")
+            st.session_state.projeto_info['custos_config']['custo_area_privativa'] = cub_value
+
+        info['custos_config']['custo_terreno_m2'] = st.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
+        info['custos_config']['custo_area_privativa'] = st.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
+
+        submitted = st.form_submit_button("Atualizar Dados", use_container_width=True, type="primary")
+        if submitted:
+            st.session_state.project_manager.save_project(info)
+            st.success("Dados do projeto atualizados com sucesso!")
+            st.rerun()
+
+    # Cards com os dados do projeto
+    st.markdown("---")
+    c1, c2, c3 = st.columns(3)
+    cores = ["#3c763d", "#a94442", "#5c5c5c"]
+    c1.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[0]), unsafe_allow_html=True)
+    c2.markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores[1]), unsafe_allow_html=True)
+    c3.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[2]), unsafe_allow_html=True)
+
 
 # --- Detalhamento dos Pavimentos ---
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):

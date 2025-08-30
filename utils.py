@@ -79,6 +79,8 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
 def init_session_state_vars(info):
     if 'pavimentos' not in st.session_state:
         st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
+    if 'unidades' not in st.session_state:
+        st.session_state.unidades = [u.copy() for u in info.get('unidades', [])]
     if 'deleting_pav_index' not in st.session_state:
         st.session_state.deleting_pav_index = None
     if 'custos_indiretos_obra' not in st.session_state:
@@ -144,6 +146,9 @@ def load_project(pid):
         custos = project_data['custos_indiretos_percentuais']
         if custos and isinstance(list(custos.values())[0], (int, float)):
             project_data['custos_indiretos_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in custos.items()}
+    # Adiciona a inicialização de unidades
+    if 'unidades' not in project_data:
+        project_data['unidades'] = []
     return project_data
 def delete_project(pid):
     projs = [p for p in load_json(JSON_PATH) if p["id"] != pid]; save_json(projs, JSON_PATH)

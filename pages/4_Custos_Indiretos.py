@@ -8,11 +8,10 @@ from utils import (
     JSON_PATH, HISTORICO_DIRETO_PATH, HISTORICO_INDIRETO_PATH,
     load_json, save_to_historico, init_session_state_vars
 )
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 
 st.set_page_config(page_title="Custos Indiretos", layout="wide", page_icon="💸")
 
-# Injeta CSS para aumentar o tamanho da fonte da tabela AgGrid
+# Injeta CSS para a tabela
 st.markdown("""
 <style>
     /* Aumenta a fonte dos cabeçalhos das colunas e centraliza */
@@ -45,6 +44,32 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+# Função de cartão de métrica profissional com design moderno
+def card_metric_pro(label, value, delta=None, icon_name="cash-coin", bg_color="linear-gradient(145deg, #f9f9f9, #ffffff)", text_color="#007bff"):
+    st.markdown(f"""
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <div style="
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 15px; /* Reduz o padding para diminuir a altura */
+        text-align: center;
+        background: {bg_color};
+        box-shadow: 5px 5px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease;
+    "
+    onmouseover="this.style.transform='scale(1.03)'"
+    onmouseout="this.style.transform='scale(1)'"
+    >
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+            <i class="bi bi-{icon_name}" style="font-size: 1.2em; margin-right: 8px; color: {text_color};"></i>
+            <h3 style="margin: 0; color: #333; font-size: 1.0em;">{label}</h3>
+        </div>
+        <p style="font-size: 1.8em; font-weight: bold; margin: 0; color: {text_color};">{value}</p>
+        {f'<p style="color: {"green" if delta and delta > 0 else "red"}; font-size: 0.8em;">{f"+{delta}%" if delta else ""}</p>' if delta is not None else ''}
+    </div>
+    """, unsafe_allow_html=True)
 
 
 if "projeto_info" not in st.session_state:
@@ -127,16 +152,24 @@ with st.expander("Detalhamento de Custos Indiretos", expanded=True):
         )
         
         novo_percentual_float = current_percent
+        # Adicionando try-except para validação mais robusta
         try:
-            novo_percentual_float = float(novo_percentual_str.replace(',', '.'))
+            # Substitui a vírgula por ponto para a conversão e remove espaços
+            temp_value = novo_percentual_str.strip().replace(',', '.')
+            if temp_value:
+                novo_percentual_float = float(temp_value)
+            else:
+                novo_percentual_float = 0.0 # Define 0 se o campo estiver vazio
         except ValueError:
-            pass
+            st.error(f"Valor inválido para '{item}'. Por favor, insira um número.")
+            novo_percentual_float = current_percent # Mantém o valor original
             
         # Valida se o novo percentual está dentro do intervalo
         if not (min_val <= novo_percentual_float <= max_val):
             st.warning(f"O percentual para '{item}' deve estar entre {min_val:.2f}% e {max_val:.2f}%.")
-            novo_percentual_float = current_percent # Mantém o valor anterior para evitar erros
-
+            # Força o valor a ficar dentro do intervalo se for editado
+            novo_percentual_float = max(min_val, min(novo_percentual_float, max_val))
+            
         # Coluna Custo Total (calculado)
         custo_calculado_item = vgv_total * (novo_percentual_float / 100)
         cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_calculado_item)}</div>", unsafe_allow_html=True)

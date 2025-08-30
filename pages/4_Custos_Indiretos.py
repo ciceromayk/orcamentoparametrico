@@ -62,7 +62,6 @@ info = st.session_state.projeto_info
 st.title("💸 Custos Indiretos")
 st.subheader("Análise e Detalhamento de Custos Indiretos do Projeto")
 
-
 # Cálculos Preliminares
 custos_config = info.get('custos_config', {})
 preco_medio_venda_m2 = custos_config.get('preco_medio_venda_m2', 10000.0)
@@ -74,33 +73,14 @@ for item, values in st.session_state.custos_indiretos_percentuais.items():
     percentual = values.get('percentual', 0)
     custo_calculado_item = vgv_total * (float(percentual) / 100)
     custo_indireto_calculado += custo_calculado_item
-    
-with st.container(border=True):
-    card_cols = st.columns(3)
-    
-    card_cols[0].markdown(render_metric_card(
-        "VGV Total",
-        f"R$ {fmt_br(vgv_total)}",
-        "#007bff"
-    ), unsafe_allow_html=True)
 
-    card_cols[1].markdown(render_metric_card(
-        "Custo Indireto Total",
-        f"R$ {fmt_br(custo_indireto_calculado)}",
-        "#28a745"
-    ), unsafe_allow_html=True)
+# Layout de duas colunas
+col1, col2 = st.columns([2, 1])
 
-    card_cols[2].markdown(render_metric_card(
-        "% do Custo Indireto",
-        f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%",
-        "#ff7f00"
-    ), unsafe_allow_html=True)
-
-
-# Bloco principal com a nova tabela manual
-with st.container(border=True):
+# Bloco principal com a tabela manual na coluna 1
+with col1:
     st.write("### Ajuste os Percentuais")
-
+    
     # Definindo as colunas da tabela manual
     col_widths = [4, 2, 2]
     headers = ["Item", "Percentual (%)", "Custo (R$)"]
@@ -151,5 +131,24 @@ with st.container(border=True):
             st.session_state.custos_indiretos_percentuais[item]['percentual'] = novo_percentual_float
             st.rerun()
 
-    # Atualiza o estado da sessão
-    info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais
+# Bloco com os cards na coluna 2
+with col2:
+    st.write("### Resumo Financeiro")
+    st.markdown(render_metric_card(
+        "VGV Total",
+        f"R$ {fmt_br(vgv_total)}",
+        "#007bff"
+    ), unsafe_allow_html=True)
+    st.markdown(render_metric_card(
+        "Custo Indireto Total",
+        f"R$ {fmt_br(custo_indireto_calculado)}",
+        "#28a745"
+    ), unsafe_allow_html=True)
+    st.markdown(render_metric_card(
+        "% do Custo Indireto",
+        f"{((custo_indireto_calculado / vgv_total) * 100):.2f}%" if vgv_total > 0 else "0.00%",
+        "#ff7f00"
+    ), unsafe_allow_html=True)
+
+# Atualiza o estado da sessão
+info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais

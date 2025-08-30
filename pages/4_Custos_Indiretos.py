@@ -46,32 +46,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# Função de cartão de métrica profissional com design moderno
-def card_metric_pro(label, value, delta=None, icon_name="cash-coin", bg_color="linear-gradient(145deg, #f9f9f9, #ffffff)", text_color="#007bff"):
-    st.markdown(f"""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <div style="
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 15px; /* Reduz o padding para diminuir a altura */
-        text-align: center;
-        background: {bg_color};
-        box-shadow: 5px 5px 15px rgba(0,0,0,0.05);
-        transition: transform 0.3s ease;
-    "
-    onmouseover="this.style.transform='scale(1.03)'"
-    onmouseout="this.style.transform='scale(1)'"
-    >
-        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-            <i class="bi bi-{icon_name}" style="font-size: 1.2em; margin-right: 8px; color: {text_color};"></i>
-            <h3 style="margin: 0; color: #333; font-size: 1.0em;">{label}</h3>
-        </div>
-        <p style="font-size: 1.8em; font-weight: bold; margin: 0; color: {text_color};">{value}</p>
-        {f'<p style="color: {"green" if delta and delta > 0 else "red"}; font-size: 0.8em;">{f"+{delta}%" if delta else ""}</p>' if delta is not None else ''}
-    </div>
-    """, unsafe_allow_html=True)
-
-
 if "projeto_info" not in st.session_state:
     st.error("Nenhum projeto carregado. Por favor, selecione um projeto na página inicial.")
     if st.button("Voltar para a seleção de projetos"):
@@ -123,9 +97,8 @@ with st.container(border=True):
     ), unsafe_allow_html=True)
 
 
-# Bloco principal com a nova tabela AgGrid e Gráficos
-with st.expander("Detalhamento de Custos Indiretos", expanded=True):
-
+# Bloco principal com a nova tabela manual
+with st.container(border=True):
     st.write("### Ajuste os Percentuais")
 
     # Definindo as colunas da tabela manual

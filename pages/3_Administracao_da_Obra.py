@@ -126,7 +126,7 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
     st.write("### Ajuste os Custos Mensais")
 
     # Definindo as colunas da tabela manual
-    col_widths = [4, 2, 2]
+    col_widths = [5, 1.5, 1.5]
     headers = ["Item", "Custo Mensal (R$)", "Custo Total (R$)"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):

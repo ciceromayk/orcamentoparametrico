@@ -214,7 +214,10 @@ with st.expander("📝 Dados de Unidades", expanded=True):
     b1_un, _ = st.columns([0.2, 0.8])
     if b1_un.button("➕ Adicionar Unidade"):
         # Adiciona uma nova unidade ao estado da sessão
-        st.session_state.unidades.append({"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0})
+        # Inclui a chave 'area_privativa_total' para evitar o KeyError
+        new_unit = {"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0}
+        new_unit['area_privativa_total'] = new_unit['quantidade'] * new_unit['area_privativa']
+        st.session_state.unidades.append(new_unit)
         st.rerun()
 
     # Definir as colunas da tabela

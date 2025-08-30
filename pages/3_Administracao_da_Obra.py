@@ -144,13 +144,13 @@ with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
             label_visibility="collapsed"
         )
         
-        # Lógica para converter o valor do input para float com segurança
+        novo_valor_mensal_float = valor_mensal
         try:
             # Substitui a vírgula por ponto para a conversão
             novo_valor_mensal_float = float(novo_valor_mensal_str.replace(',', '.'))
         except ValueError:
             # Se a conversão falhar, usa o valor original e não atualiza
-            novo_valor_mensal_float = valor_mensal
+            pass
         
         custo_total_item = novo_valor_mensal_float * st.session_state.duracao_obra
         cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_total_item)}</div>", unsafe_allow_html=True)

@@ -168,7 +168,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             pav['area'] = cols[4].number_input("area", min_value=0.0, value=float(pav['area']), step=10.0, format="%.2f", key=f"area_{i}", label_visibility="collapsed")
             
             # Use um callback para disparar o rerun quando o checkbox mudar
-            cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed", on_change=st.rerun)
+            cols[7].checkbox(" ", value=pav.get('constr', True), key=f"constr_{i}", label_visibility="collapsed")
             
             area_total_i, area_eq_i = pav['area'] * pav['rep'], (pav['area'] * pav['rep']) * pav['coef']
             area_constr_i = area_total_i if pav.get('constr', True) else 0.0

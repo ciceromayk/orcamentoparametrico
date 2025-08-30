@@ -8,20 +8,30 @@ from utils import (
     JSON_PATH, HISTORICO_DIRETO_PATH, HISTORICO_INDIRETO_PATH,
     load_json, save_to_historico
 )
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 
 st.set_page_config(page_title="Administração da Obra", layout="wide", page_icon="📝")
 
-# Injeta CSS para aumentar o tamanho da fonte da tabela AgGrid
+# Injeta CSS para aumentar o tamanho da fonte da tabela e adicionar barra de rolagem
 st.markdown("""
 <style>
-    /* Aumenta a fonte do cabeçalho da tabela */
-    .ag-theme-streamlit .ag-header-cell-text {
-        font-size: 20px !important;
+    /* Aumenta a fonte dos cabeçalhos das colunas e centraliza */
+    [data-testid="column"] .st-markdown > p {
+        font-size: 14px;
+        text-align: center;
     }
-    /* Aumenta a fonte das células da tabela */
-    .ag-theme-streamlit .ag-cell {
-        font-size: 20px !important;
+    /* Aumenta a fonte dos inputs e selectboxes */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div > div {
+        font-size: 14px;
+    }
+    /* Diminui a fonte do checkbox */
+    .stCheckbox > label {
+        font-size: 14px;
+    }
+    /* Adiciona barra de rolagem vertical para a seção de pavimentos */
+    .pavimentos-scrollable-container {
+        max-height: 400px;
+        overflow-y: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -97,82 +107,51 @@ with st.container(border=True):
 
 
 with st.expander("💸 Custos Indiretos de Obra (por Período)", expanded=True):
-    # Removendo a divisão em colunas para a tabela e o resumo
-    col_slider = st.columns([0.6])[0]
-    with col_slider:
-        st.session_state.duracao_obra = st.slider(
-            "Duração da Obra (meses):",
-            min_value=1,
-            max_value=60,
-            value=st.session_state.duracao_obra
-        )
-
-    # Prepara os dados para o AgGrid
-    dados_tabela_obra = []
-    
-    for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
-        dados_tabela_obra.append({
-            "Item": item,
-            "Custo Mensal (R$)": valor_mensal,
-            "Custo Total (R$)": valor_mensal * st.session_state.duracao_obra
-        })
-    
-    df_custos_obra = pd.DataFrame(dados_tabela_obra)
-
-    # Configura o AgGrid para ter larguras de coluna fixas
-    gb = GridOptionsBuilder.from_dataframe(df_custos_obra)
-
-    jscode_formatador_moeda = JsCode("""
-        function(params) {
-            if (params.value === null || params.value === undefined) { return ''; }
-            return 'R$ ' + params.value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        }
-    """)
-    
-    gb.configure_column("Item", headerName="Item", flex=3, resizable=False)
-    gb.configure_column("Custo Mensal (R$)",
-        headerName="Custo Mensal (R$)",
-        editable=True,
-        valueFormatter=jscode_formatador_moeda,
-        flex=1,
-        resizable=False,
-        type=["numericColumn", "numberColumnFilter", "customNumericFormat"]
+    st.session_state.duracao_obra = st.slider(
+        "Duração da Obra (meses):",
+        min_value=1,
+        max_value=60,
+        value=st.session_state.duracao_obra
     )
-    gb.configure_column("Custo Total (R$)",
-        headerName="Custo Total (R$)",
-        valueFormatter=jscode_formatador_moeda,
-        flex=1,
-        resizable=False,
-        type=["numericColumn", "numberColumnFilter"]
-    )
-    
-    gridOptions = gb.build()
 
     st.write("### Ajuste os Custos Mensais")
-    grid_response = AgGrid(
-        df_custos_obra,
-        gridOptions=gridOptions,
-        height=450,
-        width='100%',
-        update_mode='MODEL_CHANGED',
-        allow_unsafe_jscode=True,
-        try_convert_numeric_dtypes=True,
-        theme='streamlit'
-    )
+
+    # Definindo as colunas da tabela manual
+    col_widths = [4, 2, 2]
+    headers = ["Item", "Custo Mensal (R$)", "Custo Total (R$)"]
+    header_cols = st.columns(col_widths)
+    for hc, title in zip(header_cols, headers):
+        hc.markdown(f'<p style="text-align:center; font-size:16px;"><b>{title}</b></p>', unsafe_allow_html=True)
     
-    # Usa os dados editados
-    edited_df_custos_obra = grid_response['data']
-    
-    # Recalcula o total a partir dos dados editados
-    if not edited_df_custos_obra.empty:
-        total_mensal = edited_df_custos_obra["Custo Mensal (R$)"].sum()
-        custo_indireto_obra_total_recalculado = total_mensal * st.session_state.duracao_obra
-        
-        # Salva o estado
-        st.session_state.custos_indiretos_obra = {
-            row["Item"]: row["Custo Mensal (R$)"]
-            for index, row in edited_df_custos_obra.iterrows()
-        }
-        info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra
-        info['duracao_obra'] = st.session_state.duracao_obra
-        
+    # Adicionando barra de rolagem para a tabela
+    with st.container(height=450, border=True):
+        # Itera sobre os itens para criar as linhas
+        for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
+            cols = st.columns(col_widths)
+            
+            # Coluna Item (não editável)
+            cols[0].markdown(f"<div style='padding-top: 8px;'>{item}</div>", unsafe_allow_html=True)
+            
+            # Coluna Custo Mensal (editável)
+            novo_valor_mensal = cols[1].number_input(
+                "Custo Mensal (R$)",
+                min_value=0.0,
+                value=float(valor_mensal),
+                step=100.0,
+                format="%.2f",
+                key=f"custo_mensal_{item}",
+                label_visibility="collapsed"
+            )
+            
+            # Coluna Custo Total (calculado)
+            custo_total_item = novo_valor_mensal * st.session_state.duracao_obra
+            cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>R$ {fmt_br(custo_total_item)}</div>", unsafe_allow_html=True)
+            
+            # Atualiza o session_state se o valor foi alterado
+            if novo_valor_mensal != valor_mensal:
+                st.session_state.custos_indiretos_obra[item] = novo_valor_mensal
+                st.rerun()
+
+    # Salvando no estado da sessão
+    info['custos_indiretos_obra'] = st.session_state.custos_indiretos_obra
+    info['duracao_obra'] = st.session_state.duracao_obra

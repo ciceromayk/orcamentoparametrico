@@ -136,6 +136,14 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
 # --- Nova Tabela de Dados de Unidades ---
 with st.expander("📝 Dados de Unidades", expanded=True):
+    b1_un, _ = st.columns([0.2, 0.8])
+    if b1_un.button("➕ Adicionar Unidade"):
+        # Cria uma nova entrada na lista de pavimentos com o tipo de unidade padrão
+        nova_unidade = DEFAULT_PAVIMENTO.copy()
+        nova_unidade['tipo'] = 'Área Privativa (Autônoma)'
+        st.session_state.pavimentos.append(nova_unidade)
+        st.rerun()
+
     st.write("### Detalhamento por Tipo de Unidade")
     
     # Agrupar os dados por tipo de unidade

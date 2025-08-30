@@ -131,11 +131,15 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 
     # Cards com os dados do projeto
     st.markdown("---")
-    c1, c2, c3 = st.columns(3)
-    cores = ["#3c763d", "#a94442", "#5c5c5c"]
+    c1, c2, c3, c4 = st.columns(4)
+    cores = ["#3c763d", "#a94442", "#5c5c5c", "#1f77b4"]
     c1.markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores[0]), unsafe_allow_html=True)
     c2.markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa_unidades)} m²", cores[1]), unsafe_allow_html=True)
     c3.markdown(render_metric_card("Área Eq.", f"{fmt_br(area_equivalente_total)} m²", cores[2]), unsafe_allow_html=True)
+    
+    # Adicionando o novo card de Índice AP/AC
+    relacao_ap_ac = total_area_privativa_unidades / area_construida_total if area_construida_total > 0 else 0
+    c4.markdown(render_metric_card("Índice AP / AC", f"{relacao_ap_ac:.2f}", cores[3]), unsafe_allow_html=True)
 
 
 # --- Detalhamento dos Pavimentos ---

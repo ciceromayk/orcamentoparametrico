@@ -134,6 +134,55 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     if st.session_state.deleting_pav_index is not None:
         confirm_delete_dialog()
 
+# --- Nova Tabela de Dados de Unidades ---
+with st.expander("📝 Dados de Unidades", expanded=True):
+    st.write("### Detalhamento por Tipo de Unidade")
+    
+    # Agrupar os dados por tipo de unidade
+    unidades_df = pd.DataFrame(st.session_state.pavimentos)
+    
+    # Remove colunas que não são relevantes para a tabela de unidades
+    unidades_df = unidades_df[unidades_df['tipo'] == 'Área Privativa (Autônoma)']
+    
+    # Agrupar e somar os valores
+    unidades_agrupadas = unidades_df.groupby('nome').agg(
+        quantidade=('rep', 'sum'),
+        area_privativa=('area', 'first') # Pega a primeira área, pois são iguais por nome de unidade
+    ).reset_index()
+
+    # Calcular a área privativa total
+    unidades_agrupadas['area_privativa_total'] = unidades_agrupadas['quantidade'] * unidades_agrupadas['area_privativa']
+
+    # Definir as colunas da tabela
+    col_widths = [3, 1.5, 2, 2.5]
+    headers = ["Tipo de Unidade", "Quantidade", "Área Privativa (m²)", "Área Privativa Total (m²)"]
+    header_cols = st.columns(col_widths)
+    for hc, title in zip(header_cols, headers):
+        hc.markdown(f'<p style="text-align:center; font-size:14px;"><b>{title}</b></p>', unsafe_allow_html=True)
+
+    # Exibir a tabela
+    total_quantidade = 0
+    total_area_privativa_total = 0
+    if not unidades_agrupadas.empty:
+        for index, row in unidades_agrupadas.iterrows():
+            cols = st.columns(col_widths)
+            cols[0].markdown(f"<div style='padding-top: 8px;'>{row['nome']}</div>", unsafe_allow_html=True)
+            cols[1].markdown(f"<div style='text-align:center; padding-top: 8px;'>{row['quantidade']}</div>", unsafe_allow_html=True)
+            cols[2].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(row['area_privativa'])}</div>", unsafe_allow_html=True)
+            cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(row['area_privativa_total'])}</div>", unsafe_allow_html=True)
+            total_quantidade += row['quantidade']
+            total_area_privativa_total += row['area_privativa_total']
+
+    # Linha de totais
+    if not unidades_agrupadas.empty:
+        st.markdown("---")
+        total_cols = st.columns(col_widths)
+        total_cols[0].markdown(f"<div style='font-weight: bold; padding-top: 8px;'>Total</div>", unsafe_allow_html=True)
+        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{total_quantidade}</div>", unsafe_allow_html=True)
+        total_cols[2].empty() # Área privativa individual não tem total
+        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center; padding-top: 8px;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
+
+
 info['pavimentos'] = st.session_state.pavimentos
 
 if st.button("Salvar Dados do Projeto", type="primary"):

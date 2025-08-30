@@ -94,6 +94,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         
         st.write("---")
         
+        # Agrupa os campos de CUB/SINAPI
         col4, col5 = st.columns(2)
         
         # Seleção de CUB/SINAPI
@@ -108,11 +109,14 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
             st.info(f"O CUB de {estado_selecionado} ({padrao_selecionado}) é de R$ {fmt_br(cub_value)}/m².")
             st.session_state.projeto_info['custos_config']['custo_area_privativa'] = cub_value
 
-        info['custos_config']['custo_terreno_m2'] = st.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
-        info['custos_config']['custo_area_privativa'] = st.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
-
-        # Adicionado o campo para o Preço Médio de Venda aqui
-        info['custos_config']['preco_medio_venda_m2'] = st.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
+        st.write("---")
+        
+        # Agrupa os campos de custos em uma única linha
+        col_custos_1, col_custos_2, col_custos_3 = st.columns(3)
+        
+        info['custos_config']['custo_terreno_m2'] = col_custos_1.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
+        info['custos_config']['custo_area_privativa'] = col_custos_2.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
+        info['custos_config']['preco_medio_venda_m2'] = col_custos_3.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
 
         submitted = st.form_submit_button("Atualizar Dados", use_container_width=True, type="primary")
         if submitted:

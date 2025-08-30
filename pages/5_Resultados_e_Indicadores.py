@@ -151,29 +151,32 @@ def generate_ai_analysis():
     }
 
     prompt = f"""
-    Act as a senior real estate development viability analyst. Your task is to analyze a project's data and generate a detailed and analytical report in Portuguese.
+    Você está atuando como um consultor especializado em análises de viabilidade econômica no setor de desenvolvimento imobiliário. O objetivo é realizar um estudo de viabilidade detalhado para o projeto, identificando os riscos e benefícios envolvidos.
 
-    The report should have the following sections, formatted with simple numbered headings followed by the content:
+    Por favor, aborde os seguintes pontos na sua análise, utilizando os dados fornecidos:
     
-    1. Avaliação da Viabilidade Financeira
-    Start with a paragraph summarizing the financial health of the project. Compare the Gross Profit Margin with the following market benchmarks: "{benchmark_data['profit_margin_benchmark']}". Explain the implications of the project's Gross Profit and its overall attractiveness.
+    1. Análise de Custos
+    Identifique os principais custos do projeto com base na composição de custos. Descreva como cada componente (Custo Direto, Custo Indireto de Venda, Custo Indireto de Obra e Custo do Terreno) contribui para o custo total, em termos de valor e porcentagem.
     
-    2. Análise Detalhada dos Custos
-    Analyze the composition of the Total Cost. Present the absolute values and percentages of each cost type (Direct Cost, Indirect Sales Cost, Indirect Construction Cost, and Land Cost). Use the following context to enrich your analysis: "{benchmark_data['cost_proportions_info']}".
-
-    3. Análise de Desempenho por Área
-    Provide and interpret the cost per square meter (m²) indicators for Direct Cost, Indirect Cost, and Total Cost. Compare these costs with the following market benchmark: "{benchmark_data['cost_per_sqm_benchmark']}".
-
-    4. Recomendações Estratégicas
-    Provide a list of 3 to 5 actionable strategic recommendations to improve the project's viability. The recommendations should be specific. For example, cite examples of where cost reduction can occur or how revenue can be increased.
-
-    5. Conclusão e Próximos Passos
-    A final paragraph that summarizes the analysis and offers a perspective on the next steps, such as conducting deeper market studies or starting the detailing phase.
-
-    Below is the project data. Use it for the analysis. The values are in Brazilian Reais (R$).
+    2. Análise de Receita e Mercado
+    Identifique a receita principal do projeto (VGV) e analise os fatores que podem afetá-la, como o preço médio de venda por m² e a área privativa total. Comente sobre como as tendências do mercado imobiliário podem influenciar essa receita.
     
-    Project Data:
-    - Name: {prompt_data['nome_projeto']}
+    3. Análise de Riscos Financeiros
+    Liste os riscos financeiros potenciais associados a um projeto imobiliário, como flutuações de custos, alterações nas taxas de juros de financiamento e mudanças na demanda do mercado.
+    
+    4. Projeção de Retorno e Comparativo
+    Analise o retorno financeiro do projeto (Lucro Bruto e Margem de Lucro). Compare a Margem de Lucro com os benchmarks de mercado: "{benchmark_data['profit_margin_benchmark']}".
+    
+    5. Recomendações Estratégicas
+    Ofereça de 3 a 5 recomendações estratégicas para melhorar a viabilidade do projeto. As recomendações devem ser específicas e acionáveis, como oportunidades para reduzir custos ou aumentar receitas.
+    
+    6. Conclusão e Próximos Passos
+    Forneça uma conclusão que resuma suas principais descobertas e ofereça uma perspectiva sobre os próximos passos para o projeto, como aprofundamento do estudo de mercado ou detalhamento de projetos executivos.
+
+    Apresente sua resposta no formato de uma estrutura passo a passo, organizando as informações de maneira lógica e sequencial. Mantenha um tom formal e técnico ao longo do texto.
+
+    Dados do Projeto:
+    - Nome: {prompt_data['nome_projeto']}
     - VGV Total: R$ {prompt_data['vgv_total']:.2f}
     - Custo Total: R$ {prompt_data['custo_total']:.2f}
     - Lucro Bruto: R$ {prompt_data['lucro_bruto']:.2f}

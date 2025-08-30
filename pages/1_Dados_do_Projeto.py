@@ -182,7 +182,9 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
             total_area_pav += area_total_i
             total_area_eq_pav += area_eq_i
-            total_area_constr_pav += area_constr_i
+            # Corrigindo a soma da área construída
+            if pav.get('constr', True):
+                total_area_constr_pav += area_total_i
 
         st.markdown('</div>', unsafe_allow_html=True)
 

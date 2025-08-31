@@ -75,29 +75,6 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
     "Despesas de Escritório e Apoio": 800.0,
 }
 
-CUB_DATA = {
-    "São Paulo": {
-        "Padrão Baixo": 2012.33,
-        "Padrão Normal": 2345.67,
-        "Padrão Alto": 2876.54,
-    },
-    "Rio de Janeiro": {
-        "Padrão Baixo": 1987.45,
-        "Padrão Normal": 2298.32,
-        "Padrão Alto": 2789.12,
-    },
-    "Minas Gerais": {
-        "Padrão Baixo": 1899.11,
-        "Padrão Normal": 2190.55,
-        "Padrão Alto": 2650.99,
-    },
-    "Paraná": {
-        "Padrão Baixo": 2055.77,
-        "Padrão Normal": 2399.10,
-        "Padrão Alto": 2940.88,
-    },
-}
-
 def init_session_state_vars(info):
     if 'pavimentos' not in st.session_state:
         st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
@@ -124,6 +101,9 @@ def init_session_state_vars(info):
     # Adicionando o preço médio de venda ao estado da sessão se não existir
     if 'preco_medio_venda_m2' not in st.session_state:
         st.session_state.preco_medio_venda_m2 = info['custos_config'].get('preco_medio_venda_m2', 10000.0)
+    # Adicionando a nova variável para o custo direto ajustado
+    if 'custo_direto_ajustado' not in st.session_state:
+        st.session_state.custo_direto_ajustado = None
 
 def calcular_areas_e_custos(pavimentos_list, custos_config):
     pavimentos_df = pd.DataFrame(pavimentos_list)
@@ -246,6 +226,8 @@ def render_sidebar(form_key):
         st.sidebar.markdown("---")
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
             if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
+            if 'custo_direto_ajustado' in st.session_state and st.session_state.custo_direto_ajustado is not None:
+                info['custo_direto_ajustado'] = st.session_state.custo_direto_ajustado
             if 'custos_indiretos_percentuais' in st.session_state: info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais
             st.session_state.project_manager.save_project(st.session_state.projeto_info)
             st.sidebar.success("Projeto salvo com sucesso!")
@@ -255,7 +237,7 @@ def render_sidebar(form_key):
             if st.button("Arquivar Custos Indiretos", use_container_width=True):
                 info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais; save_to_historico(info, 'indireto')
         if st.sidebar.button("Mudar de Projeto", use_container_width=True):
-            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais", "preco_medio_venda_m2"]
+            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais", "preco_medio_venda_m2", "custo_direto_ajustado"]
             for key in keys_to_delete:
                 if key in st.session_state: del st.session_state[key]
             st.switch_page("Início.py")

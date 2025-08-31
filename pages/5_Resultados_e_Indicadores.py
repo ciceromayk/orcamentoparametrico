@@ -143,13 +143,6 @@ def generate_ai_analysis():
         }
     }
 
-    # Dados de benchmark da pesquisa na web
-    benchmark_data = {
-        "profit_margin_benchmark": "Pesquisas de 2024/2025 indicam que a rentabilidade de empreendimentos imobiliários no Brasil pode chegar a 19%, com valores específicos como 17,2% em São Paulo. Uma margem de lucro bruta acima de 15% é considerada promissora.",
-        "cost_per_sqm_benchmark": "Segundo dados do SINAPI (IBGE), o custo nacional por metro quadrado em dezembro de 2024 foi de R$ 1.790,66, com valores regionais que variam, por exemplo, R$ 1.847,11 no Sudeste em 2025.",
-        "cost_proportions_info": "A composição de custos de um projeto é um indicador chave de sua saúde financeira. O custo do terreno, por exemplo, tem se valorizado e pode impactar significativamente o valor final do imóvel."
-    }
-
     prompt = f"""
 Você está atuando como um consultor sênior em análise de viabilidade para o setor de desenvolvimento imobiliário. Sua tarefa é gerar um relatório analítico e detalhado em português, utilizando os dados financeiros fornecidos.
 
@@ -190,6 +183,11 @@ Mantenha um tom formal, técnico e objetivo. Use as métricas e valores fornecid
     # Adiciona a exibição de loading
     with st.spinner("Gerando análise com I.A...."):
         try:
+            # Check for API key
+            if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:
+                st.error("Chave da API do Google Gemini não encontrada.")
+                return None
+            
             API_KEY = st.session_state.gemini_api_key
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={API_KEY}"
             
@@ -245,7 +243,7 @@ Mantenha um tom formal, técnico e objetivo. Use as métricas e valores fornecid
 @st.dialog("Adicionar Chave da API")
 def api_key_dialog():
     st.write("Para usar a análise de I.A., por favor, insira sua chave da API do Google Gemini.")
-    st.markdown("Se você não tem uma, pode obter uma [aqui](https://makersuite.google.com/app/apikey).")
+    st.markdown("Se você não tem uma, pode obtê-la [aqui](https://makersuite.google.com/app/apikey).")
     
     with st.form("api_key_form"):
         api_key = st.text_input("Chave da API", type="password")

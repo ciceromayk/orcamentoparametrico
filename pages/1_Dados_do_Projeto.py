@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
-
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
     DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
     init_session_state_vars, calcular_areas_e_custos,
-    CUB_DATA,
-    ProjectManager # Adicionada a importação de ProjectManager
+    ProjectManager
 )
 
 st.set_page_config(page_title="Dados do Projeto", layout="wide")
@@ -100,35 +98,6 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         
         st.write("---")
         
-        # Agrupa os campos de CUB/SINAPI
-        col4, col5 = st.columns(2)
-
-
-
-
-
-
-        # Seleção de CUB/SINAPI
-        estados = list(CUB_DATA.keys())
-        padroes = ["Padrão Normal", "Padrão Alto", "Padrão Baixo"]
-
-
-
-
-
-
-
-
-        estado_selecionado = col4.selectbox("Estado (CUB/SINAPI)", options=["Selecione"] + estados)
-        padrao_selecionado = col5.selectbox("Padrão", options=["Selecione"] + padroes)
-        
-        if estado_selecionado != "Selecione" and padrao_selecionado != "Selecione":
-            cub_value = CUB_DATA[estado_selecionado][padrao_selecionado]
-            st.info(f"O CUB de {estado_selecionado} ({padrao_selecionado}) é de R$ {fmt_br(cub_value)}/m².")
-            st.session_state.projeto_info['custos_config']['custo_area_privativa'] = cub_value
-
-        st.write("---")
-
         # Agrupa os campos de custos em uma única linha
         col_custos_1, col_custos_2, col_custos_3 = st.columns(3)
         
@@ -180,10 +149,10 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             pav['nome'] = cols[0].text_input("nome", pav['nome'], key=f"nome_{i}", label_visibility="collapsed")
             pav['tipo'] = cols[1].selectbox("tipo", list(TIPOS_PAVIMENTO.keys()), list(TIPOS_PAVIMENTO.keys()).index(pav.get('tipo', next(iter(TIPOS_PAVIMENTO)))), key=f"tipo_{i}", label_visibility="collapsed")
             pav['rep'] = cols[2].number_input("rep", min_value=1, value=pav['rep'], step=1, key=f"rep_{i}", label_visibility="collapsed")
-
+            
             min_c, max_c = TIPOS_PAVIMENTO[pav['tipo']]
             help_text = f"Intervalo: {min_c:.2f} - {max_c:.2f}"
-
+            
             if float(pav.get('coef', min_c)) > max_c:
                 pav['coef'] = max_c
             elif float(pav.get('coef', min_c)) < min_c:
@@ -259,7 +228,7 @@ with st.expander("📝 Dados de Unidades", expanded=True):
             unidade['nome'] = cols[0].text_input("nome", unidade['nome'], key=f"unid_nome_{i}", label_visibility="collapsed")
             unidade['quantidade'] = cols[1].number_input("quantidade", min_value=1, value=unidade['quantidade'], step=1, key=f"unid_qtd_{i}", label_visibility="collapsed")
             unidade['area_privativa'] = cols[2].number_input("area_priv", min_value=0.0, value=unidade['area_privativa'], step=1.0, format="%.2f", key=f"unid_area_{i}", label_visibility="collapsed")
-
+            
             unidade['area_privativa_total'] = unidade['quantidade'] * unidade['area_privativa']
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
 

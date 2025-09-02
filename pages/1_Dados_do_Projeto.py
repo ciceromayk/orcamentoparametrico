@@ -39,6 +39,11 @@ st.markdown("""
         font-weight: bold;
         border-top: 2px solid #e0e0e0;
     }
+    /* Ajustes para os botões */
+    .stButton>button {
+        width: 100%;
+        height: 100%;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -103,7 +108,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
         # Botões lado a lado e alinhados à direita
-        button_cols = st.columns([1, 1, 1, 1])
+        button_cols = st.columns([1, 1, 0.5, 0.5])
         
         # O botão Atualizar Dados agora está na terceira coluna, e o botão Ver no Mapa na quarta.
         # Os dois primeiros estão vazios, empurrando os botões para a direita
@@ -116,7 +121,8 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
         encoded_address = urllib.parse.quote_plus(full_address)
         maps_url = f"https://www.google.com/maps/place/{encoded_address}"
-
+        
+        # O botão de Ver no Mapa agora está na quarta coluna, com tamanho e alinhamento ajustados
         button_cols[3].markdown(
             f"""
             <a href="{maps_url}" target="_blank">

@@ -102,25 +102,26 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
-        if st.form_submit_button("Atualizar Dados", type="primary"):
+        # Botões lado a lado e alinhados à direita
+        button_cols = st.columns([1, 1, 1, 1])
+        
+        # O botão Atualizar Dados agora está na terceira coluna, e o botão Ver no Mapa na quarta.
+        # Os dois primeiros estão vazios, empurrando os botões para a direita
+        if button_cols[2].form_submit_button("Atualizar Dados", type="primary", use_container_width=True):
             info['num_unidades'] = total_unidades
             st.session_state.project_manager.save_project(info)
             st.success("Dados do projeto atualizados com sucesso!")
             st.rerun()
-
-        # Botão para ver no mapa
-        full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
         
-        # Encodar o endereço para URL
+        full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
         encoded_address = urllib.parse.quote_plus(full_address)
         maps_url = f"https://www.google.com/maps/place/{encoded_address}"
-        
-        # Exibir o botão que abre uma nova janela
-        st.markdown(
+
+        button_cols[3].markdown(
             f"""
             <a href="{maps_url}" target="_blank">
                 <button style="
-                    background-color: #4CAF50; /* Green */
+                    background-color: #4CAF50;
                     border: none;
                     color: white;
                     padding: 10px 24px;
@@ -131,6 +132,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
                     margin: 4px 2px;
                     cursor: pointer;
                     border-radius: 8px;
+                    width: 100%;
                 ">
                     Ver no Mapa
                 </button>

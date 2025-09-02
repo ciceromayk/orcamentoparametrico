@@ -92,10 +92,15 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 
     # Use um formulário para atualizar os dados do projeto
     with st.form(key="dados_gerais_form"):
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 2])
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
         info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
         
+        col_end1, col_end2, col_end3 = st.columns(3)
+        info['bairro'] = col_end1.text_input("Bairro", value=info.get('bairro', ''))
+        info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
+        info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
+
         st.write("---")
         
         col3, col4, col5 = st.columns(3)

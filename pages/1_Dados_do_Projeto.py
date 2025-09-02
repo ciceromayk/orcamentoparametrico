@@ -150,7 +150,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
                     height: 40px;
                     width: 180px;
                 ">
-                    Ver no Mapa
+                    🗺️ Ver no Mapa
                 </button>
             </a>
             """,

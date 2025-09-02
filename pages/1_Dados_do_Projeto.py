@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import urllib.parse
 from utils import (
     fmt_br, render_metric_card, render_sidebar,
     DEFAULT_PAVIMENTO, TIPOS_PAVIMENTO,
@@ -101,6 +102,43 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
+        if st.form_submit_button("Atualizar Dados", type="primary"):
+            info['num_unidades'] = total_unidades
+            st.session_state.project_manager.save_project(info)
+            st.success("Dados do projeto atualizados com sucesso!")
+            st.rerun()
+
+        # Botão para ver no mapa
+        full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
+        
+        # Encodar o endereço para URL
+        encoded_address = urllib.parse.quote_plus(full_address)
+        maps_url = f"https://www.google.com/maps/place/{encoded_address}"
+        
+        # Exibir o botão que abre uma nova janela
+        st.markdown(
+            f"""
+            <a href="{maps_url}" target="_blank">
+                <button style="
+                    background-color: #4CAF50; /* Green */
+                    border: none;
+                    color: white;
+                    padding: 10px 24px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    border-radius: 8px;
+                ">
+                    Ver no Mapa
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
         st.write("---")
         
         col3, col4, col5 = st.columns(3)
@@ -111,13 +149,6 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         st.write("---")
 
         info['custos_config']['preco_medio_venda_m2'] = st.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
-
-        submitted = st.form_submit_button("Atualizar Dados", use_container_width=True, type="primary")
-        if submitted:
-            info['num_unidades'] = total_unidades
-            st.session_state.project_manager.save_project(info)
-            st.success("Dados do projeto atualizados com sucesso!")
-            st.rerun()
 
     # Cards com os dados do projeto
     st.markdown("---")

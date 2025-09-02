@@ -107,8 +107,8 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
-        # Botões lado a lado e alinhados à direita
-        button_cols = st.columns([1, 1, 0.5, 0.5])
+        # Botões lado a lado e alinhados à direita com tamanhos iguais
+        button_cols = st.columns([1, 1, 1, 1])
         
         # O botão Atualizar Dados agora está na terceira coluna, e o botão Ver no Mapa na quarta.
         # Os dois primeiros estão vazios, empurrando os botões para a direita
@@ -122,30 +122,31 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         encoded_address = urllib.parse.quote_plus(full_address)
         maps_url = f"https://www.google.com/maps/place/{encoded_address}"
         
-        # O botão de Ver no Mapa agora está na quarta coluna, com tamanho e alinhamento ajustados
-        button_cols[3].markdown(
-            f"""
-            <a href="{maps_url}" target="_blank">
-                <button style="
-                    background-color: #4CAF50;
-                    border: none;
-                    color: white;
-                    padding: 10px 24px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
-                    cursor: pointer;
-                    border-radius: 8px;
-                    width: 100%;
-                ">
-                    Ver no Mapa
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
+        # Usando um contêiner para garantir o alinhamento
+        with button_cols[3]:
+            st.markdown(
+                f"""
+                <a href="{maps_url}" target="_blank">
+                    <button style="
+                        background-color: #4CAF50;
+                        border: none;
+                        color: white;
+                        padding: 10px 24px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        font-size: 16px;
+                        margin: 4px 2px;
+                        cursor: pointer;
+                        border-radius: 8px;
+                        width: 100%;
+                    ">
+                        Ver no Mapa
+                    </button>
+                </a>
+                """,
+                unsafe_allow_html=True
+            )
 
         st.write("---")
         

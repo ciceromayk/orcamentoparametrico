@@ -7,6 +7,10 @@ from weasyprint import HTML
 import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
+import re
+from PIL import Image
+import requests
+import time
 
 # --- CONSTANTES GLOBAIS e outras funções ---
 
@@ -18,6 +22,16 @@ def fmt_br(valor):
         return "0,00"
     s = f"{valor:,.2f}"
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+def safe_float(valor_str, default=0.0):
+    """
+    Tenta converter uma string com vírgula para float.
+    Retorna o valor default em caso de erro.
+    """
+    try:
+        return float(str(valor_str).replace(',', '.'))
+    except (ValueError, TypeError):
+        return default
 
 JSON_PATH = "projects.json"
 HISTORICO_DIRETO_PATH = "historico_direto.json"
@@ -76,6 +90,9 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
 }
 
 def init_session_state_vars(info):
+    """
+    Inicializa as variáveis de estado da sessão do Streamlit com os dados do projeto.
+    """
     if 'pavimentos' not in st.session_state:
         st.session_state.pavimentos = [p.copy() for p in info.get('pavimentos', [DEFAULT_PAVIMENTO.copy()])]
     if 'unidades' not in st.session_state:
@@ -105,7 +122,45 @@ def init_session_state_vars(info):
     if 'custo_direto_ajustado' not in st.session_state:
         st.session_state.custo_direto_ajustado = None
 
+# --- NOVAS FUNÇÕES DE CÁLCULO ---
+def calculate_financial_metrics(info, pavimentos_df, custo_direto_total, custo_indireto_obra_total):
+    """
+    Calcula todas as métricas financeiras do projeto.
+    """
+    custos_config = info.get('custos_config', {})
+    
+    # Recalcula a área privativa total com base nos dados das unidades
+    total_area_privativa = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
+    preco_medio_venda_m2 = custos_config.get('preco_medio_venda_m2', 10000.0)
+    vgv_total = total_area_privativa * preco_medio_venda_m2
+
+    custos_indiretos_percentuais = info.get('custos_indiretos_percentuais', {})
+    custo_indireto_calculado = 0
+    if custos_indiretos_percentuais:
+        for item, values in custos_indiretos_percentuais.items():
+            percentual = values.get('percentual', 0)
+            custo_indireto_calculado += vgv_total * (float(percentual) / 100)
+
+    custo_terreno_total = info.get('area_terreno', 0) * custos_config.get('custo_terreno_m2', 2500.0)
+
+    valor_total_despesas = custo_direto_total + custo_indireto_calculado + custo_terreno_total + custo_indireto_obra_total
+    lucratividade_valor = vgv_total - valor_total_despesas
+    lucratividade_percentual = (lucratividade_valor / vgv_total) * 100 if vgv_total > 0 else 0
+
+    return {
+        "vgv_total": vgv_total,
+        "custo_indireto_calculado": custo_indireto_calculado,
+        "custo_terreno_total": custo_terreno_total,
+        "valor_total_despesas": valor_total_despesas,
+        "lucratividade_valor": lucratividade_valor,
+        "lucratividade_percentual": lucratividade_percentual,
+        "area_privativa_total": total_area_privativa
+    }
+
 def calcular_areas_e_custos(pavimentos_list, custos_config):
+    """
+    Calcula as áreas e custos diretos totais com base na lista de pavimentos.
+    """
     pavimentos_df = pd.DataFrame(pavimentos_list)
     if pavimentos_df.empty:
         return 0, 0, 0, pd.DataFrame()
@@ -126,16 +181,21 @@ def calcular_areas_e_custos(pavimentos_list, custos_config):
 
 # Cria uma classe para gerenciar o projeto
 class ProjectManager:
+    """
+    Gerencia a persistência de dados de projetos em arquivos JSON.
+    """
     def __init__(self, path):
         self.path = path
         self.init_storage()
 
     def init_storage(self):
+        """Inicializa o arquivo de armazenamento se ele não existir."""
         if not os.path.exists(self.path):
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=4)
 
     def load_json(self, path=None):
+        """Carrega dados de um arquivo JSON."""
         _path = path if path else self.path
         if not os.path.exists(_path):
             return []
@@ -143,14 +203,17 @@ class ProjectManager:
             return json.load(f)
 
     def save_json(self, data, path=None):
+        """Salva dados em um arquivo JSON."""
         _path = path if path else self.path
         with open(_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def list_projects(self):
+        """Lista todos os projetos salvos."""
         return self.load_json()
 
     def save_project(self, info):
+        """Salva ou atualiza um projeto."""
         projs = self.load_json()
         if info.get("id"):
             projs = [p if p["id"] != info["id"] else info for p in projs]
@@ -162,20 +225,27 @@ class ProjectManager:
         self.save_json(projs)
 
     def load_project(self, pid):
+        """Carrega um projeto específico pelo ID."""
         project_data = next((p for p in self.load_json() if p["id"] == pid), None)
-        if project_data and 'etapas_percentuais' in project_data:
+        if not project_data:
+            return None
+        
+        # Converte formatos antigos para os novos se necessário
+        if 'etapas_percentuais' in project_data:
             etapas = project_data['etapas_percentuais']
-            if etapas and isinstance(list(etapas.values())[0], (int, float)):
+            if isinstance(etapas, dict) and etapas and isinstance(list(etapas.values())[0], (int, float)):
                 project_data['etapas_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in etapas.items()}
-        if project_data and 'custos_indiretos_percentuais' in project_data:
+        if 'custos_indiretos_percentuais' in project_data:
             custos = project_data['custos_indiretos_percentuais']
-            if custos and isinstance(list(custos.values())[0], (int, float)):
+            if isinstance(custos, dict) and custos and isinstance(list(custos.values())[0], (int, float)):
                 project_data['custos_indiretos_percentuais'] = {k: {"percentual": v, "fonte": "Manual"} for k, v in custos.items()}
         if 'unidades' not in project_data:
             project_data['unidades'] = []
+            
         return project_data
 
     def delete_project(self, pid):
+        """Deleta um projeto pelo ID."""
         projs = [p for p in self.load_json() if p["id"] != pid]
         self.save_json(projs)
 
@@ -184,6 +254,7 @@ if 'project_manager' not in st.session_state:
     st.session_state.project_manager = ProjectManager(JSON_PATH)
 
 def save_to_historico(info, tipo_custo):
+    """Salva os custos de um projeto no histórico."""
     path = HISTORICO_DIRETO_PATH if tipo_custo == 'direto' else HISTORICO_INDIRETO_PATH
     session_key = 'etapas_percentuais' if tipo_custo == 'direto' else 'custos_indiretos_percentuais'
     historico = st.session_state.project_manager.load_json(path)
@@ -194,58 +265,101 @@ def save_to_historico(info, tipo_custo):
     st.session_state.project_manager.save_json(historico, path)
     st.toast(f"Custos {tipo_custo} de '{info['nome']}' arquivados no histórico!", icon="📚")
 
-def render_metric_card(title, value, color="#31708f"):
-    return f"""<div style="background-color:{color}; border-radius:6px; padding:15px; text-align:center; height:100%;"><div style="color:#fff; font-size:16px; margin-bottom:4px;">{title}</div><div style="color:#fff; font-size:24px; font-weight:bold;">{value}</div></div>"""
+def render_metric_card(title, value, color="#31708f", icon="bi-cash-coin"):
+    """
+    Renderiza um cartão de métrica com um design consistente e moderno.
+    """
+    return f"""
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <div style="background-color: {color}; border-radius:12px; padding:15px; text-align:center; height:100%; color:#fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+            <i class="bi {icon}" style="font-size: 1.2em; margin-right: 8px;"></i>
+            <h3 style="margin: 0; font-size: 1.0em;">{title}</h3>
+        </div>
+        <div style="font-size: 1.8em; font-weight: bold; margin: 0;">{value}</div>
+    </div>
+    """
 
 def handle_percentage_redistribution(session_key, constants_dict):
+    """
+    Lida com a redistribuição de porcentagens entre os itens.
+    """
     previous_key = f"previous_{session_key}"
-    if previous_key not in st.session_state: st.session_state[previous_key] = {k: v.copy() for k, v in st.session_state[session_key].items()}
+    if previous_key not in st.session_state:
+        st.session_state[previous_key] = {k: v.copy() for k, v in st.session_state[session_key].items()}
+    
     current, previous = st.session_state[session_key], st.session_state[previous_key]
-    if current == previous: return
-    changed_item_key = next((k for k, v in current.items() if v['percentual'] != previous.get(k, {}).get('percentual')), None)
-    if not changed_item_key: return
-    st.session_state.redistribution_occured = True
+    if current == previous:
+        return
+
+    changed_item_key = None
+    for k, v in current.items():
+        if v.get('percentual', 0) != previous.get(k, {}).get('percentual', 0):
+            changed_item_key = k
+            break
+    
+    if not changed_item_key:
+        return
+        
     delta = current[changed_item_key]['percentual'] - previous[changed_item_key]['percentual']
     total_others = sum(v['percentual'] for k, v in previous.items() if k != changed_item_key)
-    if total_others > 0:
-        for item, values in current.items():
-            if item != changed_item_key:
-                min_val, _, max_val = constants_dict[item]
-                proportion = previous[item]['percentual'] / total_others
-                new_percent = values['percentual'] - (delta * proportion)
-                current[item]['percentual'] = max(min_val, min(new_percent, max_val))
-    st.session_state[previous_key] = {k: v.copy() for k, v in current.items()}; st.rerun()
+    
+    # Se o total dos outros itens for 0, não há como redistribuir
+    if total_others <= 0:
+        st.session_state[previous_key] = {k: v.copy() for k, v in current.items()}
+        return
+
+    for item, values in current.items():
+        if item != changed_item_key:
+            min_val, _, max_val = constants_dict[item]
+            proportion = previous[item]['percentual'] / total_others
+            new_percent = values['percentual'] - (delta * proportion)
+            current[item]['percentual'] = max(min_val, min(new_percent, max_val))
+            
+    st.session_state[previous_key] = {k: v.copy() for k, v in current.items()}
+    st.rerun()
 
 def render_sidebar(form_key):
+    """
+    Renderiza a barra lateral com as opções do projeto.
+    """
     st.sidebar.title("Estudo de Viabilidade")
     
-    # Seção para carregar/editar projetos
     if "projeto_info" in st.session_state:
         info = st.session_state.projeto_info
         st.sidebar.subheader(f"Projeto: {info['nome']}")
         st.sidebar.markdown("---")
+        
+        # Botão para salvar
         if st.sidebar.button("💾 Salvar Todas as Alterações", use_container_width=True, type="primary"):
-            if 'etapas_percentuais' in st.session_state: info['etapas_percentuais'] = st.session_state.etapas_percentuais
-            if 'custo_direto_ajustado' in st.session_state and st.session_state.custo_direto_ajustado is not None:
-                info['custo_direto_ajustado'] = st.session_state.custo_direto_ajustado
-            if 'custos_indiretos_percentuais' in st.session_state: info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais
             st.session_state.project_manager.save_project(st.session_state.projeto_info)
             st.sidebar.success("Projeto salvo com sucesso!")
+        
+        # Botões de arquivamento no histórico
         with st.sidebar.expander("📚 Arquivar no Histórico"):
             if st.button("Arquivar Custos Diretos", use_container_width=True):
-                info['etapas_percentuais'] = st.session_state.etapas_percentuais; save_to_historico(info, 'direto')
+                save_to_historico(info, 'direto')
             if st.button("Arquivar Custos Indiretos", use_container_width=True):
-                info['custos_indiretos_percentuais'] = st.session_state.custos_indiretos_percentuais; save_to_historico(info, 'indireto')
+                save_to_historico(info, 'indireto')
+        
+        # Botão para mudar de projeto
         if st.sidebar.button("Mudar de Projeto", use_container_width=True):
-            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais", "preco_medio_venda_m2", "custo_direto_ajustado"]
+            keys_to_delete = ["projeto_info", "pavimentos", "etapas_percentuais", "previous_etapas_percentuais", "custos_indiretos_percentuais", "previous_custos_indiretos_percentuais", "preco_medio_venda_m2", "custo_direto_ajustado", "ai_analysis"]
             for key in keys_to_delete:
                 if key in st.session_state: del st.session_state[key]
             st.switch_page("Início.py")
+    else:
+        st.sidebar.warning("Nenhum projeto carregado.")
+        if st.sidebar.button("Voltar para Início", use_container_width=True):
+            st.switch_page("Início.py")
+
 
 def generate_pdf_report(info, vgv_total, valor_total_despesas, lucratividade_valor, lucratividade_percentual,
                        custo_direto_total, custo_indireto_calculado, custo_terreno_total, area_construida_total,
                        custos_config, custos_indiretos_percentuais, pavimentos_df, custo_indireto_obra_total):
-    
+    """
+    Gera um relatório PDF detalhado do projeto.
+    """
     def create_html_card(title, value, color):
         return f"""
         <td style="background-color: {color}; color: white; border-radius: 8px; padding: 15px; text-align: center; width: 25%;">

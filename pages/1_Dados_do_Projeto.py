@@ -116,45 +116,23 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
         info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
         
-        col_end1, col_end2, col_end3 = st.columns(3)
+        col_end1, col_end2, col_end3, col_end4 = st.columns([1, 1, 1, 1])
         info['bairro'] = col_end1.text_input("Bairro", value=info.get('bairro', ''))
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
-        # Nova linha de colunas para os botões
-        cols_buttons = st.columns([0.65, 0.35])
-
-        with cols_buttons[0]:
-            submitted = st.form_submit_button("Atualizar Dados")
-            
-        with cols_buttons[1]:
+        with col_end4:
+            st.markdown('<div style="height: 2.7rem;"></div>', unsafe_allow_html=True) # Espaço em branco para alinhar os botões
             full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
             encoded_address = urllib.parse.quote_plus(full_address)
             maps_url = f"https://www.google.com/maps/place/{encoded_address}"
+            st.link_button("🗺️ Ver no Mapa", url=maps_url, help="Clique para ver o endereço no Google Maps")
 
-            st.markdown(
-                f"""
-                <a href="{maps_url}" target="_blank" style="text-decoration: none;">
-                    <button style="
-                        background-color: #ff5252; /* Cor vermelha para o botão */
-                        border: none;
-                        color: white;
-                        padding: 10px 24px;
-                        text-align: center;
-                        text-decoration: none;
-                        display: inline-block;
-                        font-size: 16px;
-                        cursor: pointer;
-                        border-radius: 8px;
-                        height: 40px;
-                        width: 180px;
-                    ">
-                        🗺️ Ver no Mapa
-                    </button>
-                </a>
-                """,
-                unsafe_allow_html=True
-            )
+        # Nova linha de colunas para o botão de atualização
+        cols_buttons = st.columns([0.8, 0.2])
+
+        with cols_buttons[1]:
+            submitted = st.form_submit_button("Atualizar Dados")
         
         st.write("---")
         

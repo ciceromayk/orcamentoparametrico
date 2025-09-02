@@ -86,27 +86,30 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     # Chamando a função centralizada de cálculo
     area_construida_total, area_equivalente_total, _, _ = calcular_areas_e_custos(st.session_state.pavimentos, info.get('custos_config', {}))
     
-    # Calcular a área privativa total a partir das unidades
+    # Calcular a área privativa total e o número de unidades a partir dos dados de unidades
     total_area_privativa_unidades = sum(unidade['area_privativa_total'] for unidade in st.session_state.unidades)
-    
+    total_unidades = sum(unidade['quantidade'] for unidade in st.session_state.unidades)
+
     # Use um formulário para atualizar os dados do projeto
     with st.form(key="dados_gerais_form"):
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
-        info['area_terreno'] = col2.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
-        info['num_unidades'] = col3.number_input("Nº de Unidades", value=info['num_unidades'], step=1)
+        info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
         
         st.write("---")
         
-        # Agrupa os campos de custos em uma única linha
-        col_custos_1, col_custos_2, col_custos_3 = st.columns(3)
+        col3, col4, col5 = st.columns(3)
+        info['area_terreno'] = col3.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
+        info['custos_config']['custo_terreno_m2'] = col4.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
+        info['custos_config']['custo_area_privativa'] = col5.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
         
-        info['custos_config']['custo_terreno_m2'] = col_custos_1.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
-        info['custos_config']['custo_area_privativa'] = col_custos_2.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
-        info['custos_config']['preco_medio_venda_m2'] = col_custos_3.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
+        st.write("---")
+
+        info['custos_config']['preco_medio_venda_m2'] = st.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
 
         submitted = st.form_submit_button("Atualizar Dados", use_container_width=True, type="primary")
         if submitted:
+            info['num_unidades'] = total_unidades
             st.session_state.project_manager.save_project(info)
             st.success("Dados do projeto atualizados com sucesso!")
             st.rerun()
@@ -248,6 +251,9 @@ with st.expander("📝 Dados de Unidades", expanded=True):
         total_cols[2].empty()
         total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # Sincroniza o número total de unidades com o estado da sessão
+    info['num_unidades'] = total_quantidade
 
 
 info['pavimentos'] = st.session_state.pavimentos

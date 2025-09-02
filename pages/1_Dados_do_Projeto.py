@@ -47,19 +47,16 @@ st.markdown("""
         margin-top: 20px;
     }
     /* Estilo para o botão customizado */
-    .custom-button {
+    .stButton>button {
+        width: 180px; /* Largura fixa para os botões */
+        height: 40px; /* Altura fixa para os botões */
+    }
+    .stButton>button:hover {
+        filter: brightness(85%);
+    }
+    .stButton>button[type="submit"] {
         background-color: #ff5252;
-        border: none;
         color: white;
-        padding: 10px 24px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        cursor: pointer;
-        border-radius: 8px;
-        height: 40px;
-        width: 180px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -127,18 +124,9 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         # Adiciona um contêiner para os botões com layout flexbox
         st.markdown('<div class="button-container">', unsafe_allow_html=True)
         
-        # Botão para atualizar dados (agora é um botão HTML)
-        if st.markdown(
-            f"""
-            <button class="custom-button" type="submit">
-                Atualizar Dados
-            </button>
-            """,
-            unsafe_allow_html=True
-        ):
-            # Lógica para o clique do botão
-            if "submit_button_clicked" not in st.session_state:
-                st.session_state.submit_button_clicked = True
+        # Botão para atualizar dados (agora é st.form_submit_button de volta)
+        # Use um seletor CSS mais genérico para estilizar todos os botões no container
+        submitted = st.form_submit_button("Atualizar Dados")
             
         full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
         encoded_address = urllib.parse.quote_plus(full_address)
@@ -326,6 +314,10 @@ with st.expander("📝 Dados de Unidades", expanded=True):
 
 info['pavimentos'] = st.session_state.pavimentos
 info['unidades'] = st.session_state.unidades
+
+if submitted:
+    st.session_state.project_manager.save_project(info)
+    st.success("Dados do projeto atualizados com sucesso!")
 
 if st.button("Salvar Dados do Projeto", type="primary"):
     st.session_state.project_manager.save_project(info)

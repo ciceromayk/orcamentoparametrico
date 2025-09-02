@@ -121,43 +121,40 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
-        # Adiciona um contêiner para os botões com layout flexbox
-        st.markdown('<div class="button-container">', unsafe_allow_html=True)
-        
-        # Botão para atualizar dados (agora é st.form_submit_button de volta)
-        # Use um seletor CSS mais genérico para estilizar todos os botões no container
-        submitted = st.form_submit_button("Atualizar Dados")
-            
-        full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
-        encoded_address = urllib.parse.quote_plus(full_address)
-        maps_url = f"https://www.google.com/maps/place/{encoded_address}"
-        
-        # Botão para ver no mapa usando um link HTML para abrir nova aba
-        st.markdown(
-            f"""
-            <a href="{maps_url}" target="_blank" style="text-decoration: none;">
-                <button style="
-                    background-color: #4CAF50;
-                    border: none;
-                    color: white;
-                    padding: 10px 24px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    cursor: pointer;
-                    border-radius: 8px;
-                    height: 40px;
-                    width: 180px;
-                ">
-                    🗺️ Ver no Mapa
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
+        # Nova linha de colunas para os botões
+        cols_buttons = st.columns([0.65, 0.35])
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        with cols_buttons[0]:
+            submitted = st.form_submit_button("Atualizar Dados")
+            
+        with cols_buttons[1]:
+            full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
+            encoded_address = urllib.parse.quote_plus(full_address)
+            maps_url = f"https://www.google.com/maps/place/{encoded_address}"
+
+            st.markdown(
+                f"""
+                <a href="{maps_url}" target="_blank" style="text-decoration: none;">
+                    <button style="
+                        background-color: #ff5252; /* Cor vermelha para o botão */
+                        border: none;
+                        color: white;
+                        padding: 10px 24px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        font-size: 16px;
+                        cursor: pointer;
+                        border-radius: 8px;
+                        height: 40px;
+                        width: 180px;
+                    ">
+                        🗺️ Ver no Mapa
+                    </button>
+                </a>
+                """,
+                unsafe_allow_html=True
+            )
         
         st.write("---")
         

@@ -32,43 +32,26 @@ render_sidebar(form_key="sidebar_resultados")
 info = st.session_state.projeto_info
 st.title("📈 Resultados e Indicadores Chave")
 
-# --- CÁLCULOS GERAIS ---
+# --- CÁLCULOS GERAIS (agora usando as funções de utils) ---
 pavimentos_df = pd.DataFrame(info.get('pavimentos', []))
 custos_config = info.get('custos_config', {})
-custo_direto_total, area_construida_total = 0, 0
-if not pavimentos_df.empty:
-    custo_area_privativa = custos_config.get('custo_area_privativa', 4500.0)
-    pavimentos_df["area_total"] = pavimentos_df["area"] * pavimentos_df["rep"]
-    pavimentos_df["area_eq"] = pavimentos_df["area_total"] * pavimentos_df["coef"]
-    pavimentos_df["area_constr"] = pavimentos_df.apply(lambda r: r["area_total"] if r["constr"] else 0.0, axis=1)
-    pavimentos_df["custo_direto"] = pavimentos_df["area_eq"] * custo_area_privativa
-    custo_direto_total = pavimentos_df["custo_direto"].sum()
-    area_construida_total = pavimentos_df["area_constr"].sum()
-
-# Recalcula a área privativa total com base nos dados das unidades
-total_area_privativa = sum(u['area_privativa_total'] for u in info.get('unidades', []) if 'area_privativa_total' in u)
-preco_medio_venda_m2 = custos_config.get('preco_medio_venda_m2', 10000.0)
-vgv_total = total_area_privativa * preco_medio_venda_m2
-
-custos_indiretos_percentuais = info.get('custos_indiretos_percentuais', {})
-custo_indireto_calculado = 0
-if custos_indiretos_percentuais:
-    for item, values in custos_indiretos_percentuais.items():
-        percentual = values.get('percentual', 0)
-        custo_indireto_calculado += vgv_total * (float(percentual) / 100)
-
-custo_terreno_total = info.get('area_terreno', 0) * custos_config.get('custo_terreno_m2', 2500.0)
+area_construida_total, _, custo_direto_total, pavimentos_df = calcular_areas_e_custos(st.session_state.pavimentos, custos_config)
 
 # Obter o custo indireto de obra da session_state de forma segura
 custo_indireto_obra_total = 0
 if 'custos_indiretos_obra' in st.session_state and 'duracao_obra' in st.session_state:
-    for item, valor_mensal in st.session_state.custos_indiretos_obra.items():
-        custo_indireto_obra_total += valor_mensal * st.session_state.duracao_obra
+    total_mensal = sum(st.session_state.custos_indiretos_obra.values())
+    custo_indireto_obra_total = total_mensal * st.session_state.duracao_obra
 
-# TOTAIS - incluindo os custos indiretos de obra
-valor_total_despesas = custo_direto_total + custo_indireto_calculado + custo_terreno_total + custo_indireto_obra_total
-lucratividade_valor = vgv_total - valor_total_despesas
-lucratividade_percentual = (lucratividade_valor / vgv_total) * 100 if vgv_total > 0 else 0
+# Calculando todas as métricas financeiras de uma só vez
+finance_metrics = calculate_financial_metrics(info, pavimentos_df, custo_direto_total, custo_indireto_obra_total)
+vgv_total = finance_metrics['vgv_total']
+valor_total_despesas = finance_metrics['valor_total_despesas']
+lucratividade_valor = finance_metrics['lucratividade_valor']
+lucratividade_percentual = finance_metrics['lucratividade_percentual']
+custo_indireto_calculado = finance_metrics['custo_indireto_calculado']
+custo_terreno_total = finance_metrics['custo_terreno_total']
+total_area_privativa = finance_metrics['area_privativa_total']
 
 # --- APRESENTAÇÃO DOS RESULTADOS ---
 
@@ -80,21 +63,20 @@ with st.container(border=True):
     num_unidades = info.get('num_unidades', 0)
     
     resumo_cols = st.columns(4)
-    cores_resumo = ["#3c763d", "#a94442", "#5c5c5c", "#1f77b4"]
-    resumo_cols[0].markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", cores_resumo[0]), unsafe_allow_html=True)
-    resumo_cols[1].markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa)} m²", cores_resumo[1]), unsafe_allow_html=True)
-    resumo_cols[2].markdown(render_metric_card("Índice AC / AP", f"{relacao_ac_ap:.2f}", cores_resumo[2]), unsafe_allow_html=True)
-    resumo_cols[3].markdown(render_metric_card("Nº de Unidades", f"{num_unidades}", cores_resumo[3]), unsafe_allow_html=True)
+    resumo_cols[0].markdown(render_metric_card("Área Constr.", f"{fmt_br(area_construida_total)} m²", "#3c763d", icon="bi-building"), unsafe_allow_html=True)
+    resumo_cols[1].markdown(render_metric_card("Área Privativa", f"{fmt_br(total_area_privativa)} m²", "#a94442", icon="bi-house"), unsafe_allow_html=True)
+    resumo_cols[2].markdown(render_metric_card("Índice AC / AP", f"{relacao_ac_ap:.2f}", "#5c5c5c", icon="bi-calculator"), unsafe_allow_html=True)
+    resumo_cols[3].markdown(render_metric_card("Nº de Unidades", f"{num_unidades}", "#1f77b4", icon="bi-columns"), unsafe_allow_html=True)
     
 
 with st.container(border=True):
     cores = ["#00829d", "#6a42c1", "#3c763d", "#a94442", "#fd7e14", "#20c997", "#31708f", "#8a6d3b"]
     st.subheader("Resultados Financeiros")
     res_cols = st.columns(4)
-    res_cols[0].markdown(render_metric_card("VGV Total", f"R$ {fmt_br(vgv_total)}", cores[0]), unsafe_allow_html=True)
-    res_cols[1].markdown(render_metric_card("Custo Total", f"R$ {fmt_br(valor_total_despesas)}", cores[1]), unsafe_allow_html=True)
-    res_cols[2].markdown(render_metric_card("Lucro Bruto", f"R$ {fmt_br(lucratividade_valor)}", cores[2]), unsafe_allow_html=True)
-    res_cols[3].markdown(render_metric_card("Margem de Lucro", f"{lucratividade_percentual:.2f}%", cores[3]), unsafe_allow_html=True)
+    res_cols[0].markdown(render_metric_card("VGV Total", f"R$ {fmt_br(vgv_total)}", cores[0], icon="bi-cash-stack"), unsafe_allow_html=True)
+    res_cols[1].markdown(render_metric_card("Custo Total", f"R$ {fmt_br(valor_total_despesas)}", cores[1], icon="bi-currency-dollar"), unsafe_allow_html=True)
+    res_cols[2].markdown(render_metric_card("Lucro Bruto", f"R$ {fmt_br(lucratividade_valor)}", cores[2], icon="bi-piggy-bank"), unsafe_allow_html=True)
+    res_cols[3].markdown(render_metric_card("Margem de Lucro", f"{lucratividade_percentual:.2f}%", cores[3], icon="bi-percent"), unsafe_allow_html=True)
     st.divider()
     st.subheader("Composição do Custo Total")
     comp_cols = st.columns(4) # Alterado para 4 colunas
@@ -104,17 +86,17 @@ with st.container(border=True):
         p_indireto_obra = (custo_indireto_obra_total / valor_total_despesas * 100)
         p_terreno = (custo_terreno_total / valor_total_despesas * 100)
 
-        comp_cols[0].markdown(render_metric_card(f"Custo Direto ({p_direto:.2f}%)", f"R$ {fmt_br(custo_direto_total)}", cores[6]), unsafe_allow_html=True)
-        comp_cols[1].markdown(render_metric_card(f"Indiretos Venda ({p_indireto_venda:.2f}%)", f"R$ {fmt_br(custo_indireto_calculado)}", cores[7]), unsafe_allow_html=True)
-        comp_cols[2].markdown(render_metric_card(f"Indiretos Obra ({p_indireto_obra:.2f}%)", f"R$ {fmt_br(custo_indireto_obra_total)}", "#ff7f0e"), unsafe_allow_html=True) # Novo card
-        comp_cols[3].markdown(render_metric_card(f"Custo do Terreno ({p_terreno:.2f}%)", f"R$ {fmt_br(custo_terreno_total)}", cores[1]), unsafe_allow_html=True)
+        comp_cols[0].markdown(render_metric_card(f"Custo Direto ({p_direto:.2f}%)", f"R$ {fmt_br(custo_direto_total)}", cores[6], icon="bi-hammer"), unsafe_allow_html=True)
+        comp_cols[1].markdown(render_metric_card(f"Indiretos Venda ({p_indireto_venda:.2f}%)", f"R$ {fmt_br(custo_indireto_calculado)}", cores[7], icon="bi-megaphone"), unsafe_allow_html=True)
+        comp_cols[2].markdown(render_metric_card(f"Indiretos Obra ({p_indireto_obra:.2f}%)", f"R$ {fmt_br(custo_indireto_obra_total)}", "#ff7f0e", icon="bi-wrench"), unsafe_allow_html=True) # Novo card
+        comp_cols[3].markdown(render_metric_card(f"Custo do Terreno ({p_terreno:.2f}%)", f"R$ {fmt_br(custo_terreno_total)}", cores[1], icon="bi-map"), unsafe_allow_html=True)
     st.divider()
     st.subheader("Indicadores por Área Construída")
     ind_cols = st.columns(4)
-    ind_cols[0].markdown(render_metric_card("Terreno / Custo Total", f"{(custo_terreno_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0):.2f}%", cores[4]), unsafe_allow_html=True)
-    ind_cols[1].markdown(render_metric_card("Custo Direto / m²", f"R$ {fmt_br(custo_direto_total / area_construida_total if area_construida_total > 0 else 0)}", cores[5]), unsafe_allow_html=True)
-    ind_cols[2].markdown(render_metric_card("Custo Indireto / m²", f"R$ {fmt_br((custo_indireto_calculado + custo_indireto_obra_total) / area_construida_total if area_construida_total > 0 else 0)}", cores[6]), unsafe_allow_html=True)
-    ind_cols[3].markdown(render_metric_card("Custo Total / m²", f"R$ {fmt_br(valor_total_despesas / area_construida_total if area_construida_total > 0 else 0)}", cores[7]), unsafe_allow_html=True)
+    ind_cols[0].markdown(render_metric_card("Terreno / Custo Total", f"{(custo_terreno_total / valor_total_despesas * 100 if valor_total_despesas > 0 else 0):.2f}%", cores[4], icon="bi-geo-alt"), unsafe_allow_html=True)
+    ind_cols[1].markdown(render_metric_card("Custo Direto / m²", f"R$ {fmt_br(custo_direto_total / area_construida_total if area_construida_total > 0 else 0)}", cores[5], icon="bi-rulers"), unsafe_allow_html=True)
+    ind_cols[2].markdown(render_metric_card("Custo Indireto / m²", f"R$ {fmt_br((custo_indireto_calculado + custo_indireto_obra_total) / area_construida_total if area_construida_total > 0 else 0)}", cores[6], icon="bi-person-gear"), unsafe_allow_html=True)
+    ind_cols[3].markdown(render_metric_card("Custo Total / m²", f"R$ {fmt_br(valor_total_despesas / area_construida_total if area_construida_total > 0 else 0)}", cores[7], icon="bi-clipboard-data"), unsafe_allow_html=True)
 
 st.divider()
 
@@ -183,12 +165,15 @@ Mantenha um tom formal, técnico e objetivo. Use as métricas e valores fornecid
     # Adiciona a exibição de loading
     with st.spinner("Gerando análise com I.A...."):
         try:
-            # Check for API key
-            if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:
-                st.error("Chave da API do Google Gemini não encontrada.")
-                return None
+            # Check for API key in st.secrets first, then st.session_state
+            if "gemini_api_key" not in st.secrets:
+                if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:
+                    st.error("Chave da API do Google Gemini não encontrada. Por favor, adicione-a.")
+                    return None
+                API_KEY = st.session_state.gemini_api_key
+            else:
+                API_KEY = st.secrets["gemini_api_key"]
             
-            API_KEY = st.session_state.gemini_api_key
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={API_KEY}"
             
             payload = {
@@ -256,8 +241,10 @@ def api_key_dialog():
 
 # Adiciona o botão de análise com IA
 if st.button("Gerar Análise de Viabilidade com I.A.", type="primary"):
-    if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:
-        api_key_dialog()
+    if "gemini_api_key" not in st.secrets:
+        if "gemini_api_key" not in st.session_state or not st.session_state.gemini_api_key:
+            api_key_dialog()
+            # St.stop()
     else:
         # Tenta gerar a análise e exibe-a no expander
         analysis_text = generate_ai_analysis()
@@ -288,7 +275,7 @@ if st.button("Gerar e Baixar Relatório PDF", type="primary"):
         pdf_data = generate_pdf_report(
             info, vgv_total, valor_total_despesas, lucratividade_valor, lucratividade_percentual,
             custo_direto_total, custo_indireto_calculado, custo_terreno_total, area_construida_total,
-            custos_config, custos_indiretos_percentuais, pavimentos_df, custo_indireto_obra_total
+            custos_config, st.session_state.custos_indiretos_percentuais, pavimentos_df, custo_indireto_obra_total
         )
         st.download_button(
             label="Relatório Concluído! Clique aqui para baixar.",

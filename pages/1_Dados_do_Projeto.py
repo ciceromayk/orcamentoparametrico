@@ -112,17 +112,16 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         
         # O botão Atualizar Dados agora está na terceira coluna, e o botão Ver no Mapa na quarta.
         # Os dois primeiros estão vazios, empurrando os botões para a direita
-        if button_cols[2].form_submit_button("Atualizar Dados", type="primary", use_container_width=True):
-            info['num_unidades'] = total_unidades
-            st.session_state.project_manager.save_project(info)
-            st.success("Dados do projeto atualizados com sucesso!")
-            st.rerun()
         
+        # Usando um contêiner para garantir o alinhamento
+        with button_cols[2]:
+            st.form_submit_button("Atualizar Dados", type="primary", use_container_width=True)
+            
         full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
         encoded_address = urllib.parse.quote_plus(full_address)
         maps_url = f"https://www.google.com/maps/place/{encoded_address}"
         
-        # Usando um contêiner para garantir o alinhamento
+        # O botão de Ver no Mapa agora está na quarta coluna, com tamanho e alinhamento ajustados
         with button_cols[3]:
             st.markdown(
                 f"""

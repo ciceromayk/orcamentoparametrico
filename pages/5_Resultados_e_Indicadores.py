@@ -1,7 +1,11 @@
 # pages/3_Resultados_e_Indicadores.py
 import streamlit as st
 import pandas as pd
-from utils import *
+from utils import (
+    fmt_br, render_metric_card, render_sidebar,
+    calculate_financial_metrics, calcular_areas_e_custos,
+    generate_pdf_report
+)
 import json
 import requests
 import time

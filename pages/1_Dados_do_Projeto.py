@@ -160,7 +160,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
         st.rerun()
 
     # Larguras das colunas ajustadas
-    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.2]
+    col_widths = [2.5, 5.2, 1, 1, 1.5, 1.5, 1.5, 0.2, 0.2]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):

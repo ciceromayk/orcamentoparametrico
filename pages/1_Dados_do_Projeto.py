@@ -158,12 +158,12 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     # Ajuste na largura do botão e posicionamento
     b1, _ = st.columns([0.2, 0.8])
-    if b1.button("➕ Adicionar Pavimento"):
+    if b1.button("➕ Pavimento"):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
     # Larguras das colunas ajustadas, ajustando o último valor para o botão de exclusão
-    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.5]
+    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.8]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
@@ -235,7 +235,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 # --- Nova Tabela de Dados de Unidades ---
 with st.expander("📝 Dados de Unidades", expanded=True):
     b1_un, _ = st.columns([0.2, 0.8])
-    if b1_un.button("➕ Adicionar Unidade"):
+    if b1_un.button("➕ Unidade"):
         # Adiciona uma nova unidade ao estado da sessão
         # Inclui a chave 'area_privativa_total' para evitar o KeyError
         new_unit = {"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0}

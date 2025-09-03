@@ -113,12 +113,14 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
     # Use um formulário para atualizar os dados do projeto
     with st.form(key="dados_gerais_form"):
         # Colunas para alinhar todos os campos de endereço em uma única linha
-        col1, col2, col3, col4, col5 = st.columns([1, 2, 1, 1, 1])
+        col1, col2 = st.columns([1, 2])
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
         info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
-        info['bairro'] = col3.text_input("Bairro", value=info.get('bairro', ''))
-        info['cidade'] = col4.text_input("Cidade", value=info.get('cidade', ''))
-        info['estado'] = col5.text_input("Estado", value=info.get('estado', ''))
+        
+        col_end1, col_end2, col_end3 = st.columns([1, 1, 1])
+        info['bairro'] = col_end1.text_input("Bairro", value=info.get('bairro', ''))
+        info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
+        info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
         
         # Botões de ação em uma linha separada
         col_buttons = st.columns([1, 1, 1, 1, 1, 1])
@@ -134,14 +136,12 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         
         st.write("---")
         
-        col3, col4, col5 = st.columns(3)
-        info['area_terreno'] = col3.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
-        info['custos_config']['custo_terreno_m2'] = col4.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
-        info['custos_config']['custo_area_privativa'] = col5.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
-        
-        st.write("---")
-
-        info['custos_config']['preco_medio_venda_m2'] = st.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
+        # Agrupa os quatro campos de custos em uma única linha
+        col_custos_1, col_custos_2, col_custos_3, col_custos_4 = st.columns(4)
+        info['area_terreno'] = col_custos_1.number_input("Área Terreno (m²)", value=info['area_terreno'], format="%.2f")
+        info['custos_config']['custo_terreno_m2'] = col_custos_2.number_input("Custo do Terreno por m² (R$)", value=info['custos_config'].get('custo_terreno_m2', 0.0), format="%.2f")
+        info['custos_config']['custo_area_privativa'] = col_custos_3.number_input("Custo de Construção (R$/m² privativo)", value=info['custos_config'].get('custo_area_privativa', 0.0), format="%.2f", step=100.0)
+        info['custos_config']['preco_medio_venda_m2'] = col_custos_4.number_input("Preço Médio de Venda (R$/m² privativo)", value=info['custos_config'].get('preco_medio_venda_m2', 10000.0), format="%.2f")
 
     # Cards com os dados do projeto
     st.markdown("---")

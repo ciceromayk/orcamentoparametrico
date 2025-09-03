@@ -155,7 +155,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     # Ajuste na largura do botão e posicionamento
     b1, _ = st.columns([0.2, 0.8])
-    if b1.button("➕ Adicionar Pavimento"):
+    if b1.button("➕ Pavimento"):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
@@ -232,7 +232,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 # --- Nova Tabela de Dados de Unidades ---
 with st.expander("📝 Dados de Unidades", expanded=True):
     b1_un, _ = st.columns([0.2, 0.8])
-    if b1_un.button("➕ Adicionar Unidade"):
+    if b1_un.button("➕ Unidade"):
         # Adiciona uma nova unidade ao estado da sessão
         # Inclui a chave 'area_privativa_total' para evitar o KeyError
         new_unit = {"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0}
@@ -261,7 +261,7 @@ with st.expander("📝 Dados de Unidades", expanded=True):
             unidade['area_privativa_total'] = unidade['quantidade'] * unidade['area_privativa']
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
 
-            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=True):
+            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=False):
                 del st.session_state.unidades[i]
                 st.rerun()
 

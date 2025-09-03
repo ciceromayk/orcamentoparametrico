@@ -51,9 +51,6 @@ st.markdown("""
         width: 180px; /* Largura fixa para os botões */
         height: 40px; /* Altura fixa para os botões */
     }
-    .stButton>button:hover {
-        filter: brightness(85%);
-    }
     .stButton>button[type="submit"] {
         background-color: #ff5252;
         color: white;
@@ -122,13 +119,13 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
-        # Botões de ação em uma linha separada
-        col_buttons = st.columns([1, 1, 1, 1, 1, 1])
+        # Bloco de botões movido para aqui, após os campos de endereço
+        col_buttons = st.columns([2, 1, 1, 1])
         
-        with col_buttons[3]:
+        with col_buttons[1]:
             submitted = st.form_submit_button("Atualizar Dados", use_container_width=True)
             
-        with col_buttons[4]:
+        with col_buttons[2]:
             full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
             encoded_address = urllib.parse.quote_plus(full_address)
             maps_url = f"https://www.google.com/maps/place/{encoded_address}"
@@ -216,21 +213,8 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        if st.session_state.pavimentos:
-            total_pav_cols = st.columns(col_widths)
-            total_pav_cols[0].markdown(f"<div style='font-weight: bold; text-align: center;'>Total</div>", unsafe_allow_html=True)
-            total_pav_cols[1].empty()
-            total_pav_cols[2].empty()
-            total_pav_cols[3].empty()
-            total_pav_cols[4].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_pav)}</div>", unsafe_allow_html=True)
-            total_pav_cols[5].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_eq_pav)}</div>", unsafe_allow_html=True)
-            total_pav_cols[6].markdown(f"<div style='font-weight: bold; text-align: center;'>{fmt_br(total_area_constr_pav)}</div>", unsafe_allow_html=True)
-            total_pav_cols[7].empty()
-            total_pav_cols[8].empty()
-
-
-    if st.session_state.deleting_pav_index is not None:
-        confirm_delete_dialog()
+        if st.session_state.deleting_pav_index is not None:
+            confirm_delete_dialog()
 
 # --- Nova Tabela de Dados de Unidades ---
 with st.expander("📝 Dados de Unidades", expanded=True):

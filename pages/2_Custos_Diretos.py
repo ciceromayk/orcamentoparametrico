@@ -1,11 +1,10 @@
-# pages/2_Custos_Diretos.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils import (
     fmt_br, render_metric_card, render_sidebar, handle_percentage_redistribution,
     ETAPAS_OBRA,
-    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager, CUB_DATA
+    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
@@ -98,3 +97,26 @@ if not pavimentos_df.empty:
                     st.session_state.etapas_percentuais[etapa]['fonte'] = ref_nome
                     handle_percentage_redistribution('etapas_percentuais', ETAPAS_OBRA)
                     st.rerun()
+
+        # Adicionando a nova seção de visualização
+        st.divider()
+        st.markdown("##### Visualização da Composição do Custo por Etapa")
+
+        # Cria um DataFrame a partir dos dados do estado da sessão
+        df_etapas = pd.DataFrame(st.session_state.etapas_percentuais).T
+        df_etapas['percentual'] = df_etapas['percentual'].astype(float)
+
+        # Cria o gráfico de pizza
+        fig_pie = px.pie(
+            df_etapas,
+            values='percentual',
+            names=df_etapas.index,
+            title='Distribuição Percentual do Custo Direto',
+            hole=0.4 # Cria um "donut chart" para melhor visualização
+        )
+
+        # Ajustes de layout para o gráfico de pizza
+        fig_pie.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#000000', width=1)))
+        fig_pie.update_layout(showlegend=False)
+
+        st.plotly_chart(fig_pie, use_container_width=True)

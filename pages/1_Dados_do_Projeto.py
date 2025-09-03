@@ -48,8 +48,11 @@ st.markdown("""
     }
     /* Estilo para o botão customizado */
     .stButton>button {
-        width: 180px; /* Largura fixa para os botões */
+        /* Removido: width: 180px; Altura fixa removida para que o use_container_width=True funcione */
         height: 40px; /* Altura fixa para os botões */
+    }
+    .stButton>button:hover {
+        filter: brightness(85%);
     }
     .stButton>button[type="submit"] {
         background-color: #ff5252;
@@ -155,12 +158,12 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
     # Ajuste na largura do botão e posicionamento
     b1, _ = st.columns([0.2, 0.8])
-    if b1.button("➕ Pavimento"):
+    if b1.button("➕ Adicionar Pavimento"):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
         st.rerun()
 
-    # Larguras das colunas ajustadas
-    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.6, 0.6]
+    # Larguras das colunas ajustadas, ajustando o último valor para o botão de exclusão
+    col_widths = [2.5, 4, 1, 1, 1.5, 1.5, 1.5, 0.8, 0.5]
     headers = ["Nome", "Tipo", "Rep.", "Coef.", "Área (m²)", "Área Eq. Total", "Área Constr.", "A.C?", "Ação"]
     header_cols = st.columns(col_widths)
     for hc, title in zip(header_cols, headers):
@@ -232,7 +235,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
 # --- Nova Tabela de Dados de Unidades ---
 with st.expander("📝 Dados de Unidades", expanded=True):
     b1_un, _ = st.columns([0.2, 0.8])
-    if b1_un.button("➕ Unidade"):
+    if b1_un.button("➕ Adicionar Unidade"):
         # Adiciona uma nova unidade ao estado da sessão
         # Inclui a chave 'area_privativa_total' para evitar o KeyError
         new_unit = {"nome": f"Unidade {len(st.session_state.unidades) + 1}", "quantidade": 1, "area_privativa": 100.0}
@@ -261,34 +264,5 @@ with st.expander("📝 Dados de Unidades", expanded=True):
             unidade['area_privativa_total'] = unidade['quantidade'] * unidade['area_privativa']
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
 
-            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=False):
-                del st.session_state.unidades[i]
-                st.rerun()
-
-            total_quantidade += unidade['quantidade']
-            total_area_privativa_total += unidade['area_privativa_total']
-
-    # Linha de totais com melhorias de estilo
-    if st.session_state.unidades:
-        st.markdown("<div class='total-row'>", unsafe_allow_html=True)
-        total_cols = st.columns(col_widths)
-        total_cols[0].markdown(f"<div style='font-weight: bold; text-align:center;'>Total</div>", unsafe_allow_html=True)
-        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; '>{total_quantidade}</div>", unsafe_allow_html=True)
-        total_cols[2].empty()
-        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Sincroniza o número total de unidades com o estado da sessão
-    info['num_unidades'] = total_quantidade
-
-
-info['pavimentos'] = st.session_state.pavimentos
-info['unidades'] = st.session_state.unidades
-
-if submitted:
-    st.session_state.project_manager.save_project(info)
-    st.success("Dados do projeto atualizados com sucesso!")
-
-if st.button("Salvar Dados do Projeto", type="primary"):
-    st.session_state.project_manager.save_project(info)
-    st.success("Dados do projeto salvos com sucesso!")
+            if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=True):
+                del st.

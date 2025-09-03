@@ -121,17 +121,14 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
         
-        with col_end_btn:
-            st.markdown('<div style="height: 2.7rem;"></div>', unsafe_allow_html=True) # Espaço para alinhar com os inputs
+        # Botões na primeira coluna
+        col_buttons = st.columns([1, 2])
+        with col_buttons[0]:
+            submitted = st.form_submit_button("Atualizar Dados")
             full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
             encoded_address = urllib.parse.quote_plus(full_address)
             maps_url = f"https://www.google.com/maps/place/{encoded_address}"
             st.link_button("🗺️ Ver no Mapa", url=maps_url, help="Clique para ver o endereço no Google Maps", type="secondary")
-
-        # Container para botões de atualização e salvamento
-        st.markdown('<div class="button-container">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("Atualizar Dados")
-        st.markdown('</div>', unsafe_allow_html=True)
 
         st.write("---")
         

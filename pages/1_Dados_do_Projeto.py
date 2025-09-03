@@ -153,6 +153,7 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 
 # --- Detalhamento dos Pavimentos ---
 with st.expander("🏢 Dados dos Pavimentos", expanded=True):
+    # Ajuste na largura do botão e posicionamento
     b1, _ = st.columns([0.2, 0.8])
     if b1.button("➕ Adicionar Pavimento"):
         st.session_state.pavimentos.append(DEFAULT_PAVIMENTO.copy())
@@ -200,6 +201,7 @@ with st.expander("🏢 Dados dos Pavimentos", expanded=True):
             cols[5].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_eq_i)}</div>", unsafe_allow_html=True)
             cols[6].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(area_constr_i)}</div>", unsafe_allow_html=True)
 
+            # Botão de exclusão agora dentro do loop
             if cols[8].button("🗑️", key=f"del_{i}", use_container_width=True):
                 st.session_state.deleting_pav_index = i
                 st.rerun()

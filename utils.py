@@ -270,7 +270,7 @@ def render_metric_card(title, value, color="#31708f", icon="bi-cash-coin"):
     Renderiza um cartão de métrica com um design consistente e moderno.
     """
     return f"""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.com/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <div style="background-color: {color}; border-radius:12px; padding:15px; text-align:center; height:100%; color:#fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
             <i class="bi {icon}" style="font-size: 1.2em; margin-right: 8px;"></i>

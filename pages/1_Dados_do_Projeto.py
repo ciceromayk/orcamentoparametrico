@@ -265,4 +265,33 @@ with st.expander("📝 Dados de Unidades", expanded=True):
             cols[3].markdown(f"<div style='text-align:center; padding-top: 8px;'>{fmt_br(unidade['area_privativa_total'])}</div>", unsafe_allow_html=True)
 
             if cols[4].button("🗑️", key=f"del_unid_{i}", use_container_width=True):
-                del st.
+                del st.session_state.unidades[i]
+                st.rerun()
+
+            total_quantidade += unidade['quantidade']
+            total_area_privativa_total += unidade['area_privativa_total']
+
+    # Linha de totais com melhorias de estilo
+    if st.session_state.unidades:
+        st.markdown("<div class='total-row'>", unsafe_allow_html=True)
+        total_cols = st.columns(col_widths)
+        total_cols[0].markdown(f"<div style='font-weight: bold; text-align:center;'>Total</div>", unsafe_allow_html=True)
+        total_cols[1].markdown(f"<div style='font-weight: bold; text-align:center; '>{total_quantidade}</div>", unsafe_allow_html=True)
+        total_cols[2].empty()
+        total_cols[3].markdown(f"<div style='font-weight: bold; text-align:center;'>{fmt_br(total_area_privativa_total)}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Sincroniza o número total de unidades com o estado da sessão
+    info['num_unidades'] = total_quantidade
+
+
+info['pavimentos'] = st.session_state.pavimentos
+info['unidades'] = st.session_state.unidades
+
+if submitted:
+    st.session_state.project_manager.save_project(info)
+    st.success("Dados do projeto atualizados com sucesso!")
+
+if st.button("Salvar Dados do Projeto", type="primary"):
+    st.session_state.project_manager.save_project(info)
+    st.success("Dados do projeto salvos com sucesso!")

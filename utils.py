@@ -89,6 +89,19 @@ DEFAULT_CUSTOS_INDIRETOS_OBRA = {
     "Despesas de Escritório e Apoio": 800.0,
 }
 
+CUB_DATA = {
+    "R-1": {
+        "acabamento_baixo": 2000.00,
+        "acabamento_normal": 2500.00,
+        "acabamento_alto": 3000.00
+    },
+    "P-1": {
+        "acabamento_baixo": 1800.00,
+        "acabamento_normal": 2200.00,
+        "acabamento_alto": 2700.00
+    },
+}
+
 def init_session_state_vars(info):
     """
     Inicializa as variáveis de estado da sessão do Streamlit com os dados do projeto.
@@ -187,11 +200,20 @@ class ProjectManager:
     def __init__(self, path):
         self.path = path
         self.init_storage()
+        # Adicionando o caminho do histórico como atributo da classe
+        self.HISTORICO_DIRETO_PATH = HISTORICO_DIRETO_PATH
+        self.HISTORICO_INDIRETO_PATH = HISTORICO_INDIRETO_PATH
 
     def init_storage(self):
         """Inicializa o arquivo de armazenamento se ele não existir."""
         if not os.path.exists(self.path):
             with open(self.path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+        if not os.path.exists(HISTORICO_DIRETO_PATH):
+            with open(HISTORICO_DIRETO_PATH, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=4)
+        if not os.path.exists(HISTORICO_INDIRETO_PATH):
+            with open(HISTORICO_INDIRETO_PATH, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=4)
 
     def load_json(self, path=None):
@@ -270,7 +292,7 @@ def render_metric_card(title, value, color="#31708f", icon="bi-cash-coin"):
     Renderiza um cartão de métrica com um design consistente e moderno.
     """
     return f"""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.com/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <div style="background-color: {color}; border-radius:12px; padding:15px; text-align:center; height:100%; color:#fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
             <i class="bi {icon}" style="font-size: 1.2em; margin-right: 8px;"></i>

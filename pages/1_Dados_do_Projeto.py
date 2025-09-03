@@ -112,24 +112,26 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
 
     # Use um formulário para atualizar os dados do projeto
     with st.form(key="dados_gerais_form"):
-        col1, col2 = st.columns([1, 2])
+        # Colunas para alinhar todos os campos de endereço em uma única linha
+        col1, col2, col3, col4, col5 = st.columns([1, 2, 1, 1, 1])
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
         info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
+        info['bairro'] = col3.text_input("Bairro", value=info.get('bairro', ''))
+        info['cidade'] = col4.text_input("Cidade", value=info.get('cidade', ''))
+        info['estado'] = col5.text_input("Estado", value=info.get('estado', ''))
         
-        col_end1, col_end2, col_end3, col_end_btn = st.columns([1, 1, 1, 1])
-        info['bairro'] = col_end1.text_input("Bairro", value=info.get('bairro', ''))
-        info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
-        info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
+        # Botões de ação em uma linha separada
+        col_buttons = st.columns([1, 1, 1, 1, 1, 1])
         
-        # Botões na primeira coluna
-        col_buttons = st.columns([1, 2])
-        with col_buttons[0]:
-            submitted = st.form_submit_button("Atualizar Dados")
+        with col_buttons[3]:
+            submitted = st.form_submit_button("Atualizar Dados", use_container_width=True)
+            
+        with col_buttons[4]:
             full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
             encoded_address = urllib.parse.quote_plus(full_address)
             maps_url = f"https://www.google.com/maps/place/{encoded_address}"
-            st.link_button("🗺️ Ver no Mapa", url=maps_url, help="Clique para ver o endereço no Google Maps", type="secondary")
-
+            st.link_button("🗺️ Ver no Mapa", url=maps_url, help="Clique para ver o endereço no Google Maps", use_container_width=True)
+        
         st.write("---")
         
         col3, col4, col5 = st.columns(3)

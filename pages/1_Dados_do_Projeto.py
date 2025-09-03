@@ -117,18 +117,18 @@ with st.expander("📝 Dados Gerais do Projeto", expanded=True):
         info['nome'] = col1.text_input("Nome do Projeto", value=info['nome'])
         info['endereco'] = col2.text_input("Endereço do Projeto", value=info.get('endereco', ''))
         
-        col_end1, col_end2, col_end3 = st.columns(3)
+        col_end1, col_end2, col_end3 = st.columns([1, 1, 1])
         info['bairro'] = col_end1.text_input("Bairro", value=info.get('bairro', ''))
         info['cidade'] = col_end2.text_input("Cidade", value=info.get('cidade', ''))
         info['estado'] = col_end3.text_input("Estado", value=info.get('estado', ''))
 
         # Botões de ação em uma linha separada
-        col_buttons = st.columns(2)
+        col_buttons = st.columns([1, 1, 1, 1, 1, 1])
         
-        with col_buttons[0]:
+        with col_buttons[3]:
             submitted = st.form_submit_button("Atualizar Dados", use_container_width=True)
             
-        with col_buttons[0]:
+        with col_buttons[4]:
             full_address = f"{info.get('endereco', '')}, {info.get('bairro', '')}, {info.get('cidade', '')}, {info.get('estado', '')}"
             encoded_address = urllib.parse.quote_plus(full_address)
             maps_url = f"https://www.google.com/maps/place/{encoded_address}"

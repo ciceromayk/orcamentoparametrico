@@ -4,7 +4,7 @@ import plotly.express as px
 from utils import (
     fmt_br, render_metric_card, render_sidebar, handle_percentage_redistribution,
     ETAPAS_OBRA,
-    load_json, save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager
+    save_to_historico, init_session_state_vars, calcular_areas_e_custos, ProjectManager
 )
 
 st.set_page_config(page_title="Custos Diretos", layout="wide")
